@@ -1,0 +1,305 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.FilterFunctions &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wale.FilterFunctions</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wale.FilterFunctions</h1><div class="highlight"><pre>
+<span></span><span class="c1"># from imports import *</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="c1"># import scipy.special</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">special</span> <span class="k">as</span> <span class="n">sp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">lru_cache</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">mpmath</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mp</span>
+
+
+<div class="viewcode-block" id="top_hat_filter">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.top_hat_filter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">top_hat_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the top-hat window function for a given radius.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        R (float or numpy.ndarray): The scale (or array of scales) at which to calculate the window function.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: The top-hat window function values at the given scale(s).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">sp</span><span class="o">.</span><span class="n">j1</span><span class="p">(</span><span class="n">k</span> <span class="o">*</span> <span class="n">R</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">k</span> <span class="o">*</span> <span class="n">R</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># def top_hat_window(R):</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     Calculates the top-hat window function for a given radius.</span>
+
+<span class="c1">#     Parameters:</span>
+<span class="c1">#         R (float or numpy.ndarray): The scale (or array of scales) at which to calculate the window function.</span>
+
+<span class="c1">#     Returns:</span>
+<span class="c1">#         numpy.ndarray: The top-hat window function values at the given scale(s).</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     return 2.0 * sp.j1(R) / R</span>
+
+
+<div class="viewcode-block" id="get_W2D_FL">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.get_W2D_FL">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_W2D_FL</span><span class="p">(</span><span class="n">window_radius</span><span class="p">,</span> <span class="n">map_shape</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mi">505</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constructs a 2D Fourier-space window function for a top-hat filter.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        window_radius : float</span>
+<span class="sd">            The top-hat window radius in physical units (must be consistent with L).</span>
+<span class="sd">        map_shape     : tuple</span>
+<span class="sd">            Shape of the map (assumed square, e.g. (600,600)).</span>
+<span class="sd">        L             : float, optional</span>
+<span class="sd">            Physical size of the map (default is 505, as used for SLICS).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        2D numpy array representing the Fourier-space window.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">map_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="n">N</span> <span class="o">/</span> <span class="n">N</span>
+    <span class="c1"># Generate Fourier frequencies.</span>
+    <span class="n">kx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">dx</span><span class="p">))</span>
+    <span class="n">ky</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">dx</span><span class="p">))</span>
+    <span class="n">kx</span><span class="p">,</span> <span class="n">ky</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">kx</span><span class="p">,</span> <span class="n">ky</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+    <span class="n">k2</span> <span class="o">=</span> <span class="n">kx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">ky</span><span class="o">**</span><span class="mi">2</span>
+    <span class="c1"># Convert to radial wavenumber (with 2pi factor).</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">k2</span><span class="p">)</span>
+    <span class="c1"># Avoid division by zero at the center.</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">N</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">k</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-7</span>
+    <span class="k">if</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;tophat&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">top_hat_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">window_radius</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;starlet&quot;</span><span class="p">:</span>
+        <span class="c1"># print(&quot;Getting starlet W2D_FL&quot;)</span>
+        <span class="k">return</span> <span class="n">starlet_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">window_radius</span><span class="p">)</span></div>
+
+        <span class="c1"># return uHat_starlet_analytical(k, window_radius)</span>
+
+
+<div class="viewcode-block" id="b3_1D_ft">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.b3_1D_ft">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">b3_1D_ft</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="o">**</span> <span class="mf">4.0</span></div>
+
+
+
+<div class="viewcode-block" id="b3_2D_ft">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.b3_2D_ft">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">b3_2D_ft</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">b3_1D_ft</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">b3_1D_ft</span><span class="p">(</span><span class="n">y</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="starlet_filter">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.starlet_filter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">starlet_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes the Fourier-space starlet filter.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        k (np.ndarray): 2D array of Fourier frequencies.</span>
+<span class="sd">        R (float): The scale at which to compute the filter.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: The computed starlet filter in Fourier space.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Calculate the radial frequency</span>
+    <span class="c1"># k_radial = np.sqrt(k**2)</span>
+    <span class="c1"># Compute the starlet filter</span>
+    <span class="k">return</span> <span class="n">b3_2D_ft</span><span class="p">(</span><span class="n">k</span> <span class="o">*</span> <span class="n">R</span><span class="p">,</span> <span class="n">k</span> <span class="o">*</span> <span class="n">R</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># Fast memoized scalar S function</span>
+<div class="viewcode-block" id="S_scalar">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.S_scalar">[docs]</a>
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">S_scalar</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n cannot be smaller than -1.&quot;</span><span class="p">)</span>
+
+    <span class="n">J0</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">j0</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="n">J1</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">j1</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">b</span> <span class="o">*</span> <span class="n">J1</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">b</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">hyp1f2</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="o">-</span><span class="p">(</span><span class="n">b</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">b</span> <span class="o">**</span> <span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">J1</span> <span class="o">+</span> <span class="n">n</span> <span class="o">*</span> <span class="n">b</span><span class="o">**</span><span class="n">n</span> <span class="o">*</span> <span class="n">J0</span> <span class="o">-</span> <span class="n">n</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">S_scalar</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># Wrapper to handle arrays</span>
+<div class="viewcode-block" id="S">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.S">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">S</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">S_scalar</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">vec_func</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">S_scalar</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">vec_func</span><span class="p">(</span><span class="n">b</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># Fast uHat_starlet_analytical</span>
+<div class="viewcode-block" id="uHat_starlet_analytical">
+<a class="viewcode-back" href="../../wale.FilterFunctions.html#wale.FilterFunctions.uHat_starlet_analytical">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">uHat_starlet_analytical</span><span class="p">(</span><span class="n">eta</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes the analytical Hankel transform of the starlet U-filter.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        eta (np.ndarray or float): Dimensionless argument \( \hat{u} \).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        float or np.ndarray: Computed \( \hat{u} \).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># print(&quot;Calculating uHat_starlet_analytical (optimized version)&quot;)</span>
+
+    <span class="n">eta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">eta</span><span class="p">)</span> <span class="o">*</span> <span class="n">R</span>
+    <span class="n">eta_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">eta</span><span class="p">,</span> <span class="mf">2e-2</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>  <span class="c1"># Stability for small eta</span>
+
+    <span class="c1"># Precompute all needed S values</span>
+    <span class="n">b_half</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">eta_safe</span>
+    <span class="n">b_one</span> <span class="o">=</span> <span class="n">eta_safe</span>
+    <span class="n">b_two</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">eta_safe</span>
+
+    <span class="n">S0_half</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">b_half</span><span class="p">)</span>
+    <span class="n">S1_half</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">b_half</span><span class="p">)</span>
+    <span class="n">S2_half</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">b_half</span><span class="p">)</span>
+    <span class="n">S3_half</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">b_half</span><span class="p">)</span>
+
+    <span class="n">S0_one</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">b_one</span><span class="p">)</span>
+    <span class="n">S1_one</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">b_one</span><span class="p">)</span>
+    <span class="n">S2_one</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">b_one</span><span class="p">)</span>
+    <span class="n">S3_one</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">b_one</span><span class="p">)</span>
+
+    <span class="n">S0_two</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">b_two</span><span class="p">)</span>
+    <span class="n">S1_two</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">b_two</span><span class="p">)</span>
+    <span class="n">S2_two</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">b_two</span><span class="p">)</span>
+    <span class="n">S3_two</span> <span class="o">=</span> <span class="n">S</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">b_two</span><span class="p">)</span>
+
+    <span class="c1"># Compute factors</span>
+    <span class="n">factor1</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="mf">0.125</span> <span class="o">*</span> <span class="n">eta_safe</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">S0_half</span>
+        <span class="o">-</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">eta_safe</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">S1_half</span>
+        <span class="o">+</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">eta_safe</span> <span class="o">*</span> <span class="n">S2_half</span>
+        <span class="o">-</span> <span class="n">S3_half</span>
+    <span class="p">)</span>
+    <span class="c1"># print(&quot;done factor1&quot;)</span>
+    <span class="n">factor2</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">eta_safe</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">S0_one</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">eta_safe</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">S1_one</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">eta_safe</span> <span class="o">*</span> <span class="n">S2_one</span> <span class="o">-</span> <span class="n">S3_one</span>
+    <span class="p">)</span>
+    <span class="c1"># print(&quot;done factor2&quot;)</span>
+    <span class="n">factor3</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="mi">8</span> <span class="o">*</span> <span class="n">eta_safe</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">S0_two</span>
+        <span class="o">-</span> <span class="mi">12</span> <span class="o">*</span> <span class="n">eta_safe</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">S1_two</span>
+        <span class="o">+</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">eta_safe</span> <span class="o">*</span> <span class="n">S2_two</span>
+        <span class="o">-</span> <span class="n">S3_two</span>
+    <span class="p">)</span>
+    <span class="c1"># print(&quot;done factor3&quot;)</span>
+    <span class="c1"># Final result</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">128</span> <span class="o">/</span> <span class="mi">9</span> <span class="o">*</span> <span class="n">factor1</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">factor2</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">9</span> <span class="o">*</span> <span class="n">factor3</span><span class="p">)</span> <span class="o">/</span> <span class="n">eta_safe</span><span class="o">**</span><span class="mi">5</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
