@@ -1,0 +1,35 @@
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "WALE"
+version = "0.1.0"
+description = "Wavelet ℓ1-norm prediction tools for weak lensing"
+authors = [{ name = "Vilasini Tinnaneri Sreekanth" }]
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pandas",
+    "healpy",
+    "pyccl",
+    "mpmath",
+    "tqdm",
+    "astropy",
+    "jax"
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter",
+    "notebook",
+    "ipykernel",
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme"
+]

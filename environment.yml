@@ -1,0 +1,25 @@
+name: ldt_env
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - healpy
+  - jupyter
+  - notebook
+  - ipykernel
+  - sphinx
+  - sphinx-autodoc-typehints
+  - sphinx_rtd_theme
+  - pyccl
+  - matplotlib-base
+  - mpmath
+  - jax
+  - pip:
+      - tqdm
