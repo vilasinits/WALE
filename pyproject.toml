@@ -24,7 +24,8 @@ dependencies = [
     "jax",
     "pytest",
     "pytest-cov",
-    "ipykernel"
+    "ipykernel",
+    "camb",
 ]
 
 [project.optional-dependencies]
