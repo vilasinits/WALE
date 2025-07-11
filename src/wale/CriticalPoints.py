@@ -45,7 +45,15 @@ class CriticalPointsFinder:
     These points help identify the values of :math:`\lambda` used in our subsequent calculations.
     """
 
-    def __init__(self, variables, lw, z, chis, ngrid=50, plot=False,):
+    def __init__(
+        self,
+        variables,
+        lw,
+        z,
+        chis,
+        ngrid=50,
+        plot=False,
+    ):
         """
         Initializes the CriticalPointsFinder with cosmology and variance objects,
         and optionally configures plotting.
@@ -68,7 +76,7 @@ class CriticalPointsFinder:
         self.lw = lw
         self.z = z
         self.chis = chis
-        
+
     def get_hessian(self, x):
         """Calculates the Hessian matrix of a function."""
         x_grad = np.gradient(x)
@@ -117,12 +125,12 @@ class CriticalPointsFinder:
                     zero_crossings.append((newx, newy))
         return zero_crossings
 
-    def get_critical_points(self,variance,lw,z,chi_value):
+    def get_critical_points(self, variance, lw, z, chi_value):
         """Calculates critical points for the given redshift z and plots them if requested."""
         recal_value = self.variables.recal_value
         theta1 = self.variables.theta1_radian
         theta2 = self.variables.theta2_radian
-   
+
         deld = 1e-8
         rate_function = np.vectorize(
             lambda d1, d2: get_psi_2cell(
@@ -208,7 +216,6 @@ class CriticalPointsFinder:
         return [-x for x in critical_points1]
 
 
-
 def find_smallest_pair(critical_values):
     """
     Finds the pair of points with the smallest Euclidean distance between them from a set of critical values.
@@ -236,7 +243,9 @@ def find_smallest_pair(critical_values):
     return smallest_pair
 
 
-def find_critical_points_for_cosmo(variables, variance, ngrid_critical=90, plot=False,min_z=1, max_z=4):
+def find_critical_points_for_cosmo(
+    variables, variance, ngrid_critical=90, plot=False, min_z=1, max_z=4
+):
     """
     Finds critical points in the lensing potential based on the provided variables.
 
@@ -258,7 +267,7 @@ def find_critical_points_for_cosmo(variables, variance, ngrid_critical=90, plot=
         lw=variables.lensingweights[min_z:max_z],
         z=variables.redshifts[min_z:max_z],
         chis=variables.chis,
-        plot=plot
+        plot=plot,
     )
 
     critical_values_list = []
@@ -268,7 +277,7 @@ def find_critical_points_for_cosmo(variables, variance, ngrid_critical=90, plot=
             variance,
             lw=criticalpoints.lw[i],
             z=z_crit,
-            chi_value=criticalpoints.chis[i]
+            chi_value=criticalpoints.chis[i],
         )
         if crit_vals is not None and len(crit_vals) >= 2:
             critical_values_list.append(crit_vals[:2])

@@ -4,6 +4,7 @@ from scipy.interpolate import CubicSpline
 from .FilterFunctions import get_W2D_FL
 from .CommonUtils import get_l1_from_pdf
 
+
 def get_smoothed_app_pdf(mass_map, window_radius, binedges, filter_type, **kwargs):
     """
     Applies top-hat smoothing in Fourier space at two scales and returns the PDF of the difference map.
@@ -38,7 +39,7 @@ def get_smoothed_app_pdf(mass_map, window_radius, binedges, filter_type, **kwarg
         difference_map = smoothed2 - smoothed1
     elif filter_type == "starlet":
         W2D_1 = get_W2D_FL(window_radius, mass_map.shape, "starlet", N)
-        W2D_2 = get_W2D_FL(window_radius*2 , mass_map.shape, "starlet", N)
+        W2D_2 = get_W2D_FL(window_radius * 2, mass_map.shape, "starlet", N)
         # Fourier transform the input mass map.
         field_ft = np.fft.fftshift(np.fft.fftn(mass_map))
         # Apply the window functions in Fourier space.
@@ -52,6 +53,7 @@ def get_smoothed_app_pdf(mass_map, window_radius, binedges, filter_type, **kwarg
 
     counts, _ = np.histogram(difference_map, bins=binedges, density=True)
     return binedges, counts, difference_map
+
 
 def get_simulation_l1(
     cosmo_index_to_run,
@@ -96,7 +98,7 @@ def get_simulation_l1(
             mass_map_data = np.load(map_path)
             _, counts, diff_map = get_smoothed_app_pdf(
                 mass_map_data, R_pixels, edges, filter_type
-            )  
+            )
 
             # Calculate L1 norm for this realization
             map_variance = np.var(diff_map)
@@ -107,9 +109,13 @@ def get_simulation_l1(
             l1_values = get_l1_from_pdf(counts, centers)
             # Interpolate L1 onto the common SNR grid
             sim_l1_spline = CubicSpline(kappa_over_sigma, l1_values, extrapolate=False)
-            sim_pdf_spline = CubicSpline(kappa_over_sigma, counts, extrapolate=False)  
-            sim_l1_runs[i - 1] = sim_l1_spline(snr)  # Store interpolated L1 for this run
-            sim_pdf_runs[i - 1] = sim_pdf_spline(snr)  # Store interpolated PDF counts for this run
+            sim_pdf_spline = CubicSpline(kappa_over_sigma, counts, extrapolate=False)
+            sim_l1_runs[i - 1] = sim_l1_spline(
+                snr
+            )  # Store interpolated L1 for this run
+            sim_pdf_runs[i - 1] = sim_pdf_spline(
+                snr
+            )  # Store interpolated PDF counts for this run
             sim_sigmasq_runs[i - 1] = map_stdev  # Store variance for this run
 
             # _, ell_bins, cls_values = calculate_Cls(mass_map_data, 10, 10, 1e3, 60)
@@ -156,5 +162,5 @@ def get_simulation_l1(
         std_sim_pdf,
         # ell_bins,
         # np.array(cls_runs),
-        np.array(simvar)
+        np.array(simvar),
     )

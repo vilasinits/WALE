@@ -2,15 +2,26 @@ import numpy as np
 from astropy import units as u
 from .CosmologyModel import Cosmology_function
 from .CovarianceMatrix import *
+
 # from wale.VarianceCalculator import Variance
 
+
 class InitialiseVariables:
-    def __init__(self, h, Oc, Ob, w, wa, sigma8, dk, kmin, kmax, nplanes, theta1, **kwargs):
+    def __init__(
+        self, h, Oc, Ob, w, wa, sigma8, dk, kmin, kmax, nplanes, theta1, **kwargs
+    ):
         # Initialise cosmology
         self.cosmo = Cosmology_function(
-            h=h, Oc=Oc, Ob=Ob, w=w, wa=wa,
-            sigma8=sigma8, dk=dk, kmin=kmin, kmax=kmax,
-            **kwargs
+            h=h,
+            Oc=Oc,
+            Ob=Ob,
+            w=w,
+            wa=wa,
+            sigma8=sigma8,
+            dk=dk,
+            kmin=kmin,
+            kmax=kmax,
+            **kwargs,
         )
 
         print("\nInitialised Cosmology:")
@@ -20,7 +31,7 @@ class InitialiseVariables:
 
         # Angular scales in radians
         self.theta1_radian = theta1 * u.arcmin.to(u.radian)
-        self.theta2_radian = 2. * self.theta1_radian
+        self.theta2_radian = 2.0 * self.theta1_radian
 
         # Number of lens planes
         self.nplanes = nplanes
@@ -30,10 +41,12 @@ class InitialiseVariables:
         self.nz_file = kwargs.get("nz_file", None)
 
         print("   Initialised Variables:")
-        print(f"      Source redshift: {self.zsource if self.zsource is not None else 'from nz file'}")
+        print(
+            f"      Source redshift: {self.zsource if self.zsource is not None else 'from nz file'}"
+        )
         print(f"      Number of planes: {self.nplanes}")
         print(f"      Angular scale theta1 (radians): {self.theta1_radian}")
-        
+
         if self.zsource is None and self.nz_file is None:
             raise ValueError("Please specify either 'zs' or 'nz_file'.")
 
@@ -51,8 +64,8 @@ class InitialiseVariables:
 
         # Lensing weights
         if self.nz_file is not None:
-            self.redshifts, self.lensingweights = self.cosmo.get_lensing_weight_array_nz(
-                self.chis, self.z_nz, self.n_z
+            self.redshifts, self.lensingweights = (
+                self.cosmo.get_lensing_weight_array_nz(self.chis, self.z_nz, self.n_z)
             )
         else:
             self.redshifts, self.lensingweights = self.cosmo.get_lensing_weight_array(
@@ -65,15 +78,12 @@ class InitialiseVariables:
         if self.variability:
             self.numberofrealisations = kwargs.get("numberofrealisations", 10)
             self.cosmo.cov, self.cosmo.pnlsamples, self.cosmo.pnl = get_covariance(
-                self.cosmo, z=self.redshifts,
+                self.cosmo,
+                z=self.redshifts,
                 variability=True,
-                numberofrealisations=self.numberofrealisations
+                numberofrealisations=self.numberofrealisations,
             )
         else:
             self.cosmo.pnl = get_covariance(
-                self.cosmo, z=self.redshifts,
-                variability=False,
-                numberofrealisations=1
+                self.cosmo, z=self.redshifts, variability=False, numberofrealisations=1
             )
-            
-        

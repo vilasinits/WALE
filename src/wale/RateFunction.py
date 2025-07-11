@@ -122,7 +122,7 @@ def get_phi_projec_2cell(
                     theta1=theta1,
                     theta2=theta2,
                 )
-            ) * dchis#[j]
+            ) * dchis  # [j]
         phi_proj.append(phi_)
     phi_proj = np.array(phi_proj)
 

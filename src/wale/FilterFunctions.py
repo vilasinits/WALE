@@ -69,9 +69,12 @@ def get_W2D_FL(window_radius, map_shape, filter_type, L=505):
 
 
 def b3_1D_ft(x):
-    return (np.sin(x/2)/(x/2))**4. 
-def b3_2D_ft(x,y):
-    return b3_1D_ft(x)*b3_1D_ft(y)
+    return (np.sin(x / 2) / (x / 2)) ** 4.0
+
+
+def b3_2D_ft(x, y):
+    return b3_1D_ft(x) * b3_1D_ft(y)
+
 
 def starlet_filter(k, R):
     """
@@ -88,6 +91,7 @@ def starlet_filter(k, R):
     # k_radial = np.sqrt(k**2)
     # Compute the starlet filter
     return b3_2D_ft(k * R, k * R)
+
 
 # Fast memoized scalar S function
 @lru_cache(maxsize=None)

@@ -70,10 +70,13 @@ def get_l1_from_pdf(counts, bins):
     """
     return counts * np.abs(bins)
 
-def compute_sigma_kappa_squared(theta_arcmin, chis, lensingweights, redshifts, k, pnl, filter_type,h):
+
+def compute_sigma_kappa_squared(
+    theta_arcmin, chis, lensingweights, redshifts, k, pnl, filter_type, h
+):
     """
     Compute smoothed variance σ²_κ(θ) for a top-hat filter at angular scale θ (arcmin).
-    
+
     Parameters:
     - theta_arcmin : float
     - chis : array of comoving distances (shape n)
@@ -81,39 +84,41 @@ def compute_sigma_kappa_squared(theta_arcmin, chis, lensingweights, redshifts, k
     - redshifts : array corresponding to chis (shape n)
     - k : array of wavenumbers (shape nk)
     - pnl : 2D array of shape (n, nk), i.e., P(k, z)
-    
+
     Returns:
     - sigma²_κ(θ)
     """
     theta_rad = (theta_arcmin * u.arcmin).to(u.rad).value
-    ell = np.logspace(1,5,200)
-    
+    ell = np.logspace(1, 5, 200)
+
     P_kappa = np.zeros_like(ell)
     pnl_array = np.array([pnl[z_] for z_ in redshifts])  # shape: (n_chi, nk)
-    
+
     # plt.loglog(k, pnl_array.T)
     # plt.show()
-    
+
     for i, l in enumerate(ell):
-        
-        chis_h_inv = chis * h          # now in h⁻¹ Mpc
-        k_l     =l / chis_h_inv  
+
+        chis_h_inv = chis * h  # now in h⁻¹ Mpc
+        k_l = l / chis_h_inv
         # Interpolate P(k) at each redshift slice
-        pk_vals = np.array([
-            np.interp(k_l[j], k, pnl_array[j], left=0, right=0)
-            for j in range(len(chis))
-        ])
-        integrand = (lensingweights / chis)**2 * pk_vals
+        pk_vals = np.array(
+            [
+                np.interp(k_l[j], k, pnl_array[j], left=0, right=0)
+                for j in range(len(chis))
+            ]
+        )
+        integrand = (lensingweights / chis) ** 2 * pk_vals
         P_kappa[i] = simpson(integrand, chis)
 
     # Apply top-hat filter window in Fourier space
-    if filter_type == 'tophat':
-        W = top_hat_filter(ell , 2. * theta_rad) - top_hat_filter(ell , theta_rad)
-    elif filter_type == 'starlet':
-        W = starlet_filter(ell , 2. * theta_rad) - starlet_filter(ell , theta_rad)
-    
-    pixel_window = apply_pixel_window(ell, theta_deg=theta_rad * u.rad.to(u.deg)) 
+    if filter_type == "tophat":
+        W = top_hat_filter(ell, 2.0 * theta_rad) - top_hat_filter(ell, theta_rad)
+    elif filter_type == "starlet":
+        W = starlet_filter(ell, 2.0 * theta_rad) - starlet_filter(ell, theta_rad)
+
+    pixel_window = apply_pixel_window(ell, theta_deg=theta_rad * u.rad.to(u.deg))
     integrand = ell * P_kappa * (W**2)
-    sigma2 = simpson(integrand, ell) / (2. * np.pi)
-    
+    sigma2 = simpson(integrand, ell) / (2.0 * np.pi)
+
     return sigma2

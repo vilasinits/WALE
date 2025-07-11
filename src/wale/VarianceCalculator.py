@@ -4,7 +4,6 @@ import pyccl as ccl
 from .FilterFunctions import top_hat_filter, starlet_filter
 
 
-
 class Variance:
     """
     A class to compute linear and nonlinear variance using power spectrum interpolators and a specific cosmological model.
@@ -17,12 +16,7 @@ class Variance:
 
     """
 
-    def __init__(
-        self,
-        cosmo,
-        filter_type,
-        pk
-    ):
+    def __init__(self, cosmo, filter_type, pk):
         """
         Initializes the Variance class with cosmology and parameters for P(k) calculation.
         Calculates the non-linear power spectrum, including cosmic variance noise if volume is specified.
@@ -63,8 +57,8 @@ class Variance:
             * self.cosmo.h**3
         )
         if self.filter_type == "tophat":
-            w1_2D = top_hat_filter(self.cosmo.k , R1)
-            w2_2D = top_hat_filter(self.cosmo.k , R2)
+            w1_2D = top_hat_filter(self.cosmo.k, R1)
+            w2_2D = top_hat_filter(self.cosmo.k, R2)
             w2 = w1_2D * w2_2D
         elif self.filter_type == "starlet":
             w1_2D = starlet_filter(self.cosmo.k, R1)
@@ -96,8 +90,8 @@ class Variance:
         # pk = self.pk[redshift]
         k = self.cosmo.k * self.cosmo.h
         if self.filter_type == "tophat":
-            w1_2D = top_hat_filter(self.cosmo.k , R1)
-            w2_2D = top_hat_filter(self.cosmo.k , R2)
+            w1_2D = top_hat_filter(self.cosmo.k, R1)
+            w2_2D = top_hat_filter(self.cosmo.k, R2)
 
             w2 = w1_2D * w2_2D
         elif self.filter_type == "starlet":
@@ -107,7 +101,7 @@ class Variance:
             w2 = w1_2D * w2_2D
         constant = 1.0 / 2.0 / np.pi
         integrand = k * pk * w2 * constant
-        return simpson(integrand, x=k)/self.cosmo.h
+        return simpson(integrand, x=k) / self.cosmo.h
 
     def get_sig_slice(self, z, R1, R2):
         """

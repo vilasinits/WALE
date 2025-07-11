@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from wale.RateFunction import get_scaled_cgf
 
+
 class computePDF:
     """
     A class to compute the Probability Distribution Function (PDF) for kappa using various
@@ -24,7 +25,6 @@ class computePDF:
         self.plot_scgf = plot_scgf
         self.variance = variance
         self.pdf_values, self.kappa_values = self.compute_pdf_values()
-        
 
     def get_scgf(self):
         """
@@ -89,9 +89,7 @@ class computePDF:
         lambda_weight[0] = lambda_weight[-1] = delta_lambda / 2.0
 
         integral_sum = np.sum(np.exp(-lambda_new * kappa + phi_values) * lambda_weight)
-        pdf_kappa = np.imag(
-            integral_sum / (1.0 * np.pi)
-        ) 
+        pdf_kappa = np.imag(integral_sum / (1.0 * np.pi))
 
         return pdf_kappa.real
 
