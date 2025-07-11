@@ -21,7 +21,10 @@ dependencies = [
     "mpmath",
     "tqdm",
     "astropy",
-    "jax"
+    "jax",
+    "pytest",
+    "pytest-cov",
+    "ipykernel"
 ]
 
 [project.optional-dependencies]
