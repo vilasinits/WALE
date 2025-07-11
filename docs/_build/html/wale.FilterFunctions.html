@@ -1,0 +1,209 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.FilterFunctions module &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">wale.FilterFunctions module</a><ul>
+<li><a class="reference internal" href="#wale.FilterFunctions.S"><code class="docutils literal notranslate"><span class="pre">S()</span></code></a></li>
+<li><a class="reference internal" href="#wale.FilterFunctions.S_scalar"><code class="docutils literal notranslate"><span class="pre">S_scalar()</span></code></a></li>
+<li><a class="reference internal" href="#wale.FilterFunctions.b3_1D_ft"><code class="docutils literal notranslate"><span class="pre">b3_1D_ft()</span></code></a></li>
+<li><a class="reference internal" href="#wale.FilterFunctions.b3_2D_ft"><code class="docutils literal notranslate"><span class="pre">b3_2D_ft()</span></code></a></li>
+<li><a class="reference internal" href="#wale.FilterFunctions.get_W2D_FL"><code class="docutils literal notranslate"><span class="pre">get_W2D_FL()</span></code></a></li>
+<li><a class="reference internal" href="#wale.FilterFunctions.starlet_filter"><code class="docutils literal notranslate"><span class="pre">starlet_filter()</span></code></a></li>
+<li><a class="reference internal" href="#wale.FilterFunctions.top_hat_filter"><code class="docutils literal notranslate"><span class="pre">top_hat_filter()</span></code></a></li>
+<li><a class="reference internal" href="#wale.FilterFunctions.uHat_starlet_analytical"><code class="docutils literal notranslate"><span class="pre">uHat_starlet_analytical()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">wale.FilterFunctions module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/wale.FilterFunctions.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-wale.FilterFunctions">
+<span id="wale-filterfunctions-module"></span><h1>wale.FilterFunctions module<a class="headerlink" href="#module-wale.FilterFunctions" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.S">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">S</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/FilterFunctions.html#S"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.S" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.S_scalar">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">S_scalar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/wale/FilterFunctions.html#S_scalar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.S_scalar" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.b3_1D_ft">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">b3_1D_ft</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/FilterFunctions.html#b3_1D_ft"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.b3_1D_ft" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.b3_2D_ft">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">b3_2D_ft</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/FilterFunctions.html#b3_2D_ft"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.b3_2D_ft" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.get_W2D_FL">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">get_W2D_FL</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">505</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/FilterFunctions.html#get_W2D_FL"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.get_W2D_FL" title="Link to this definition"></a></dt>
+<dd><p>Constructs a 2D Fourier-space window function for a top-hat filter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window_radius</strong> – float
+The top-hat window radius in physical units (must be consistent with L).</p></li>
+<li><p><strong>map_shape</strong> – tuple
+Shape of the map (assumed square, e.g. (600,600)).</p></li>
+<li><p><strong>L</strong> – float, optional
+Physical size of the map (default is 505, as used for SLICS).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2D numpy array representing the Fourier-space window.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.starlet_filter">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">starlet_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/FilterFunctions.html#starlet_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.starlet_filter" title="Link to this definition"></a></dt>
+<dd><p>Computes the Fourier-space starlet filter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>k</strong> (<em>np.ndarray</em>) – 2D array of Fourier frequencies.</p></li>
+<li><p><strong>R</strong> (<em>float</em>) – The scale at which to compute the filter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The computed starlet filter in Fourier space.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.top_hat_filter">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">top_hat_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/FilterFunctions.html#top_hat_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.top_hat_filter" title="Link to this definition"></a></dt>
+<dd><p>Calculates the top-hat window function for a given radius.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>R</strong> (<em>float</em><em> or </em><em>numpy.ndarray</em>) – The scale (or array of scales) at which to calculate the window function.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The top-hat window function values at the given scale(s).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.FilterFunctions.uHat_starlet_analytical">
+<span class="sig-prename descclassname"><span class="pre">wale.FilterFunctions.</span></span><span class="sig-name descname"><span class="pre">uHat_starlet_analytical</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">eta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/FilterFunctions.html#uHat_starlet_analytical"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.FilterFunctions.uHat_starlet_analytical" title="Link to this definition"></a></dt>
+<dd><p>Computes the analytical Hankel transform of the starlet U-filter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>eta</strong> (<em>np.ndarray</em><em> or </em><em>float</em>) – Dimensionless argument ( hat{u} ).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed ( hat{u} ).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

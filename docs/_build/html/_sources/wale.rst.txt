@@ -1,0 +1,25 @@
+wale package
+============
+
+.. automodule:: wale
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   wale.CommonUtils
+   wale.ComputePDF
+   wale.CosmologyModel
+   wale.CovarianceMatrix
+   wale.CriticalPoints
+   wale.FilterFunctions
+   wale.InitializeVariables
+   wale.LoadSimulations
+   wale.RateFunction
+   wale.SpareCode
+   wale.VarianceCalculator

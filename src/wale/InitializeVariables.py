@@ -10,6 +10,29 @@ class InitialiseVariables:
     def __init__(
         self, h, Oc, Ob, w, wa, sigma8, dk, kmin, kmax, nplanes, theta1, **kwargs
     ):
+        '''
+        Initialise variables for WALE.
+        Parameters:
+        - h: Hubble constant (dimensionless)
+        - Oc: Omega matter (dimensionless)
+        - Ob: Omega baryon (dimensionless)
+        - w: Dark energy equation of state parameter (dimensionless)
+        - wa: Dark energy equation of state parameter (dimensionless)
+        - sigma8: Amplitude of matter fluctuations (dimensionless)
+        - dk: Step size in k (1/Mpc)
+        - kmin: Minimum k value (1/Mpc)
+        - kmax: Maximum k value (1/Mpc)
+        - nplanes: Number of lens planes (integer)
+        - theta1: Angular scale in arcminutes (float)
+        - **kwargs: Additional keyword arguments (optional)
+        
+        Calculates:
+        - Angular scales in radians
+        - Comoving distances for lens planes
+        - Lensing weights based on source redshift or redshift distribution file
+        - Covariance matrix or single P_nl based on variability flag
+        - Initializes Cosmology_function with provided parameters
+        '''
         # Initialise cosmology
         self.cosmo = Cosmology_function(
             h=h,
