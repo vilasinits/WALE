@@ -1,19 +1,16 @@
 # WALE
-# WALE
 
 [![CI](https://github.com/vilasinits/WALE/actions/workflows/ci.yml/badge.svg)](https://github.com/vilasinits/WALE/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 WALE ("Wavelet **\(\ell_1\)**-norm Estimator") is a Python-based toolkit for predicting and analyzing the one-point statistics of the wavelet ℓ₁-norm in cosmological density fields. WALE provides both theoretical predictions derived from one-point PDF expansions and direct measurements on simulated or observational data, enabling rigorous comparisons across scales.
 
+## Documentation
+
+Detailed API reference and tutorials are available at our documentation site.
+
 ## Installation
 
-Install WALE via PyPI:
-
-```bash
-pip install wale-estimator
-```
-
-Or clone and install from source:
+Clone and install from source:
 
 ```bash
 git clone https://github.com/vilasinits/WALE.git
