@@ -21,5 +21,8 @@ dependencies:
   - matplotlib-base
   - mpmath
   - jax
+  - pytest
+  - distinctipy
+  - ipykernel
   - pip:
       - tqdm
