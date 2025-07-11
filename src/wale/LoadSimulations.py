@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
-from wale.FilterFunctions import get_W2D_FL
-from wale.CommonUtils import get_l1_from_pdf
+from .FilterFunctions import get_W2D_FL
+from .CommonUtils import get_l1_from_pdf
 
 def get_smoothed_app_pdf(mass_map, window_radius, binedges, filter_type, **kwargs):
     """

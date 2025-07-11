@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline, UnivariateSpline
 
-from wale.RateFunction import (
+from .RateFunction import (
     get_psi_2cell,
     get_psi_derivative_delta1,
     get_psi_derivative_delta2,

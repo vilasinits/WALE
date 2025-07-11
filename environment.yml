@@ -1,4 +1,4 @@
-name: ldt_env
+name: wale_env
 channels:
   - conda-forge
   - defaults

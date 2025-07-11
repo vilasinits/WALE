@@ -1,7 +1,7 @@
 import numpy as np
 from astropy import units as u
-from wale.CosmologyModel import Cosmology_function
-from wale.CovarianceMatrix import *
+from .CosmologyModel import Cosmology_function
+from .CovarianceMatrix import *
 # from wale.VarianceCalculator import Variance
 
 class InitialiseVariables:

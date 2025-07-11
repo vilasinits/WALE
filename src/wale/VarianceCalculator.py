@@ -1,7 +1,7 @@
 import numpy as np
-from scipy.integrate import simps
+from scipy.integrate import simpson
 import pyccl as ccl
-from wale.FilterFunctions import top_hat_filter, starlet_filter
+from .FilterFunctions import top_hat_filter, starlet_filter
 
 
 
@@ -72,7 +72,7 @@ class Variance:
             w2 = w1_2D * w2_2D
         constant = 1.0 / 2.0 / np.pi
         integrand = self.cosmo.k_values * pk * w2 * constant
-        return simps(integrand, x=self.cosmo.k_values)
+        return simpson(integrand, x=self.cosmo.k_values)
 
     def nonlinear_sigma2(self, redshift, R1, R2=None, **kwargs):
         """
@@ -107,7 +107,7 @@ class Variance:
             w2 = w1_2D * w2_2D
         constant = 1.0 / 2.0 / np.pi
         integrand = k * pk * w2 * constant
-        return simps(integrand, x=k)/self.cosmo.h
+        return simpson(integrand, x=k)/self.cosmo.h
 
     def get_sig_slice(self, z, R1, R2):
         """

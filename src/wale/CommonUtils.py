@@ -1,8 +1,8 @@
 import numpy as np
-from scipy.integrate import simps
+from scipy.integrate import simpson
 from astropy import units as u
 
-from wale.FilterFunctions import *
+from .FilterFunctions import *
 
 
 def apply_pixel_window(ells, theta_deg=10.0, npix=1200):
@@ -104,7 +104,7 @@ def compute_sigma_kappa_squared(theta_arcmin, chis, lensingweights, redshifts, k
             for j in range(len(chis))
         ])
         integrand = (lensingweights / chis)**2 * pk_vals
-        P_kappa[i] = simps(integrand, chis)
+        P_kappa[i] = simpson(integrand, chis)
 
     # Apply top-hat filter window in Fourier space
     if filter_type == 'tophat':
@@ -114,6 +114,6 @@ def compute_sigma_kappa_squared(theta_arcmin, chis, lensingweights, redshifts, k
     
     pixel_window = apply_pixel_window(ell, theta_deg=theta_rad * u.rad.to(u.deg)) 
     integrand = ell * P_kappa * (W**2)
-    sigma2 = simps(integrand, ell) / (2. * np.pi)
+    sigma2 = simpson(integrand, ell) / (2. * np.pi)
     
     return sigma2

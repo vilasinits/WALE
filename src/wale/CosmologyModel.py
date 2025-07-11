@@ -3,7 +3,7 @@ from scipy.integrate import quad
 from scipy.optimize import brentq
 import pyccl as ccl
 from scipy.interpolate import interp1d
-from scipy.integrate import cumtrapz, trapezoid
+from scipy.integrate import trapezoid
 
 from pyccl.halos.pk_4pt import halomod_Tk3D_4h
 
