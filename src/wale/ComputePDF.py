@@ -9,17 +9,40 @@ from wale.RateFunction import get_scaled_cgf
 
 class computePDF:
     """
-    A class to compute the Probability Distribution Function (PDF) for kappa using various
-    cosmological and variance parameters contained within an instance of VariablesGenerator.
+    Compute the Probability Distribution Function (PDF) of the convergence field (kappa)
+    using Large Deviation Theory (LDT) and the scaled cumulant generating function (SCGF).
+
+    This class takes a `VariablesGenerator` instance that encapsulates cosmological inputs,
+    angular scales, redshift distributions, and lensing weights, along with a smoothed variance value.
+
+    The PDF is computed using the Legendre transform of the SCGF and the Bromwich integral.
+
+    Attributes
+    ----------
+    variables : VariablesGenerator
+        Contains all required parameters like angles, redshifts, chi, weights, and lambda grid.
+    variance : float
+        Smoothed variance σ²_κ(θ) for the angular scale and filter used.
+    plot_scgf : bool
+        Whether to plot the SCGF during PDF computation.
+    pdf_values : list of float
+        Computed PDF values over the kappa grid.
+    kappa_values : ndarray
+        Grid of kappa values over which the PDF is evaluated.
     """
 
     def __init__(self, variables, variance, plot_scgf=False):
         """
-        Initializes the computePDF with variables from VariablesGenerator.
+        Initialize the PDF computation class.
 
-        Parameters:
-            variables (VariablesGenerator): An instance containing all necessary cosmological parameters and variables.
-            plot_scgf (bool): Flag to enable plotting of the scaled cumulant generating function (SCGF).
+        Parameters
+        ----------
+        variables : VariablesGenerator
+            Instance containing all necessary cosmological parameters and variable arrays.
+        variance : float
+            Smoothed convergence variance σ²_κ.
+        plot_scgf : bool, optional
+            Whether to display a plot of the scaled cumulant generating function (default is False).
         """
         self.variables = variables
         self.plot_scgf = plot_scgf
@@ -28,7 +51,12 @@ class computePDF:
 
     def get_scgf(self):
         """
-        Computes the scaled cumulant generating function (SCGF) using parameters from the VariablesGenerator instance.
+        Compute the scaled cumulant generating function (SCGF) for the given inputs.
+
+        Returns
+        -------
+        scgf : ndarray
+            Array of SCGF values evaluated on the lambda grid.
         """
         # Utilizing variables from the VariablesGenerator instance
         scgf = get_scaled_cgf(
@@ -46,8 +74,14 @@ class computePDF:
 
     def compute_phi_values(self):
         """
-        Computes phi values for the lambda range specified in the VariablesGenerator instance.
-        Optionally plots the SCGF if plot_scgf is True.
+        Compute the Legendre-transformed function φ(λ) from the SCGF.
+
+        Returns
+        -------
+        lambda_new : ndarray
+            Imaginary grid of lambda values used for the inverse Laplace transform (Bromwich integral).
+        phi_values : ndarray
+            Corresponding φ(λ) values used to compute the PDF.
         """
         scgf = self.get_scgf()
         scgf_spline = CubicSpline(self.variables.lambdas, scgf[:, 0], axis=0)
@@ -82,7 +116,21 @@ class computePDF:
 
     def compute_pdf_for_kappa(self, kappa, lambda_new, phi_values):
         """
-        Computes the PDF for a given kappa value using the computed phi values by applying bromwhich integral.
+        Evaluate the PDF at a given kappa using the inverse Laplace (Bromwich) integral.
+
+        Parameters
+        ----------
+        kappa : float
+            Value of the convergence (κ) for which the PDF is evaluated.
+        lambda_new : ndarray
+            Array of complex λ values.
+        phi_values : ndarray
+            Corresponding φ(λ) values.
+
+        Returns
+        -------
+        pdf_kappa : float
+            Estimated value of the PDF at the given kappa.
         """
         delta_lambda = np.abs(lambda_new[1] - lambda_new[0]) * 1j
         lambda_weight = np.full(len(lambda_new), delta_lambda)
@@ -95,7 +143,14 @@ class computePDF:
 
     def compute_pdf_values(self):
         """
-        Computes PDF values for a range of kappa values.
+        Compute the PDF across a grid of kappa values using the Bromwich integral.
+
+        Returns
+        -------
+        pdf_values : list of float
+            Evaluated PDF values.
+        kappa_values : ndarray
+            Grid of kappa values over which the PDF is computed.
         """
         kappa_values = np.linspace(-0.06, 0.06, 501)
         lambda_new, phi_values = self.compute_phi_values()

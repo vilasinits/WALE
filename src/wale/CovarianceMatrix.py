@@ -1,17 +1,46 @@
 import numpy as np
 import pyccl as ccl
-
-# from pyccl.halos.pk_4pt import (
-#         halomod_Tk3D_1h,
-#         halomod_Tk3D_3h,
-#         Tk3D_pt,            # tree‐level 4‐halo
-#     )
 from pyccl.halos.pk_4pt import halomod_Tk3D_4h
 from pyccl.halos.pk_4pt import halomod_Tk3D_cNG
 from scipy.integrate import quad
 
 
 def get_covariance(cosmo, z, variability, numberofrealisations):
+    """
+    Compute the nonlinear matter power spectrum P(k) and optionally its covariance
+    using halo model trispectrum contributions.
+
+    If `variability` is enabled, the function uses the halo model (via pyccl) to
+    compute the connected non-Gaussian trispectrum and generate power spectrum
+    realizations by sampling from a multivariate Gaussian distribution.
+
+    Parameters
+    ----------
+    cosmo : Cosmology_function
+        A Cosmology_function object that wraps pyccl and includes nonlinear P(k) access,
+        k-grid, and other cosmological parameters.
+    z : array_like
+        Array of redshift values at which the power spectrum is evaluated.
+    variability : bool
+        Whether to compute and include non-Gaussian covariance (trispectrum) and
+        draw realizations of P(k) using a halo model.
+    numberofrealisations : int
+        Number of mock realizations to draw for each redshift (if `variability=True`).
+
+    Returns
+    -------
+    if variability is True:
+        cov_dict : dict
+            Dictionary mapping redshift z to full covariance matrix C(k, k').
+        pk_samples_dict : dict
+            Dictionary mapping redshift z to an array of shape (N, nk) containing N sampled
+            realizations of P(k).
+        pk_dict : dict
+            Dictionary mapping redshift z to the mean nonlinear P(k) at that redshift.
+    else:
+        pk_dict : dict
+            Dictionary mapping redshift z to the mean nonlinear P(k) at that redshift.
+    """
     Lbox = 505  # Mpc/h
     vol = Lbox**3
 

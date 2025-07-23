@@ -4,11 +4,47 @@ from numpy import newaxis
 
 
 def get_tau(rho):
+    """
+    Compute the large-deviation theory mapping τ(ρ) for a given density contrast ρ.
+
+    Parameters
+    ----------
+    rho : float or array_like
+        Local density ρ = 1 + δ.
+
+    Returns
+    -------
+    tau : float or ndarray
+        The corresponding τ(ρ) value based on the ν parameter.
+    """
     nu = 1.4
     return nu * (1.0 - rho ** (-1.0 / nu))
 
 
 def get_psi_2cell(variance, chi, recal, z, delta1, delta2, theta1, theta2):
+    """
+    Compute the 2-cell action ψ(δ₁, δ₂) using large-deviation theory.
+
+    Parameters
+    ----------
+    variance : object
+        Object providing nonlinear_sigma2 method for computing variances.
+    chi : float or ndarray
+        Comoving distance(s).
+    recal : float
+        Empirical recalibration factor.
+    z : float
+        Redshift.
+    delta1, delta2 : float
+        Density contrasts in each cell.
+    theta1, theta2 : float
+        Angular scales of the two cells.
+
+    Returns
+    -------
+    psi : float
+        Value of the large-deviation action ψ(δ₁, δ₂).
+    """
     delta1 = np.array([delta1])
     delta2 = np.array([delta2])
     tau1sq = get_tau(1.0 + delta1) * get_tau(1.0 + delta1)
@@ -45,6 +81,35 @@ def get_psi_2cell(variance, chi, recal, z, delta1, delta2, theta1, theta2):
 def get_phi_projec_2cell(
     theta1, theta2, zarr, chis, dchis, w, y, recal, variance, **kwargs
 ):
+    """
+    Compute projected 2-cell φ(y) by solving saddle-point equations.
+
+    Parameters
+    ----------
+    theta1, theta2 : float
+        Angular scales of the two cells.
+    zarr : ndarray
+        Redshifts at which to evaluate.
+    chis : ndarray
+        Comoving distances corresponding to redshifts.
+    dchis : float
+        Integration step size in χ.
+    w : ndarray
+        Lensing weight function W(χ).
+    y : ndarray
+        Slope values for SCGF (y-grid).
+    recal : float
+        Empirical recalibration factor.
+    variance : object
+        Provides nonlinear_sigma2(χ) interface.
+    deld : float, optional
+        Step size for finite differences (default: 1e-8).
+
+    Returns
+    -------
+    phi_proj : ndarray
+        Projected φ(y) values computed via saddle-point approximation.
+    """
     deld = kwargs.get("deld", 1e-8)
     nchi = len(chis)
     ny = len(y)
@@ -132,6 +197,33 @@ def get_phi_projec_2cell(
 def get_scaled_cgf(
     theta1, theta2, zarr, chis, dchis, lensing_weight, y, recal, variance
 ):
+    """
+    Wrapper to compute the scaled cumulant generating function (SCGF).
+
+    Parameters
+    ----------
+    theta1, theta2 : float
+        Angular scales.
+    zarr : ndarray
+        Redshift values.
+    chis : ndarray
+        Comoving distances.
+    dchis : float
+        Integration step size.
+    lensing_weight : ndarray
+        Lensing kernel W(χ).
+    y : ndarray
+        SCGF slope values.
+    recal : float
+        Recalibration factor.
+    variance : object
+        Provides nonlinear sigma²(R₁, R₂, z).
+
+    Returns
+    -------
+    scgf : ndarray
+        The scaled cumulant generating function φ(y).
+    """
     scgf = get_phi_projec_2cell(
         theta1, theta2, zarr, chis, dchis, lensing_weight, y, recal, variance
     )
@@ -141,6 +233,14 @@ def get_scaled_cgf(
 def get_psi_derivative_delta1(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
+    """
+    Compute ∂ψ/∂δ₁ using central finite differences.
+
+    Returns
+    -------
+    derivative : float
+        Numerical partial derivative of ψ with respect to δ₁.
+    """
     delh = deld  # Small step size for numerical differentiation
     delta1_plus_h = delta1 + delh
     delta1_minus_h = delta1 - delh
@@ -159,6 +259,14 @@ def get_psi_derivative_delta1(
 def get_psi_derivative_delta2(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
+    """
+    Compute ∂ψ/∂δ₂ using central finite differences.
+
+    Returns
+    -------
+    derivative : float
+        Numerical partial derivative of ψ with respect to δ₂.
+    """
     delh = deld  # Small step size for numerical differentiation
     delta2_plus_h = delta2 + delh
     delta2_minus_h = delta2 - delh
@@ -177,6 +285,14 @@ def get_psi_derivative_delta2(
 def get_psi_2nd_derivative_delta1(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
+    """
+    Compute ∂²ψ/∂δ₁² using second-order central finite differences.
+
+    Returns
+    -------
+    second_derivative : float
+        Second partial derivative of ψ with respect to δ₁.
+    """
     delh = deld
     delta1_plus_h = delta1 + delh
     delta1_minus_h = delta1 - delh
@@ -198,6 +314,14 @@ def get_psi_2nd_derivative_delta1(
 def get_psi_2nd_derivative_delta2(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
+    """
+    Compute ∂²ψ/∂δ₂² using second-order central finite differences.
+
+    Returns
+    -------
+    second_derivative : float
+        Second partial derivative of ψ with respect to δ₂.
+    """
     delh = deld
     delta2_plus_h = delta2 + delh
     delta2_minus_h = delta2 - delh
@@ -219,6 +343,14 @@ def get_psi_2nd_derivative_delta2(
 def get_psi_mixed_derivative_delta1_delta2(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
+    """
+    Compute the mixed partial derivative ∂²ψ/∂δ₁∂δ₂ using central differences.
+
+    Returns
+    -------
+    mixed_derivative : float
+        Mixed second-order partial derivative of ψ.
+    """
     delh = deld
     delta1_plus_h = delta1 + delh
     delta1_minus_h = delta1 - delh
@@ -247,6 +379,18 @@ def get_psi_mixed_derivative_delta1_delta2(
 def psi_derivative_determinant(
     deld, delta1, delta2, z, variance, chi, recal, theta1, theta2
 ):
+    """
+    Compute the determinant of the Hessian matrix of ψ(δ₁, δ₂):
+
+        det(H) = ∂²ψ/∂δ₁² * ∂²ψ/∂δ₂² − (∂²ψ/∂δ₁∂δ₂)²
+
+    This determinant is used for computing the normalization in saddle-point approximations.
+
+    Returns
+    -------
+    result : float
+        Determinant of the ψ Hessian matrix.
+    """
     psi_11 = get_psi_2nd_derivative_delta1(
         deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
     )
