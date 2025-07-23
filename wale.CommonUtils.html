@@ -1,0 +1,247 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.CommonUtils module &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="wale.ComputePDF module" href="wale.ComputePDF.html" />
+    <link rel="prev" title="wale package" href="wale.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">WALE — Wavelet ℓ₁-norm Estimator</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="wale.html">wale package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="wale.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">wale.CommonUtils module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CommonUtils.apply_pixel_window"><code class="docutils literal notranslate"><span class="pre">apply_pixel_window()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CommonUtils.compute_sigma_kappa_squared"><code class="docutils literal notranslate"><span class="pre">compute_sigma_kappa_squared()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CommonUtils.fourier_coordinate"><code class="docutils literal notranslate"><span class="pre">fourier_coordinate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CommonUtils.get_l1_from_pdf"><code class="docutils literal notranslate"><span class="pre">get_l1_from_pdf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CommonUtils.get_moments"><code class="docutils literal notranslate"><span class="pre">get_moments()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html">wale.ComputePDF module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html">wale.CosmologyModel module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CovarianceMatrix.html">wale.CovarianceMatrix module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CriticalPoints.html">wale.CriticalPoints module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.FilterFunctions.html">wale.FilterFunctions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.InitializeVariables.html">wale.InitializeVariables module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.LoadSimulations.html">wale.LoadSimulations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.RateFunction.html">wale.RateFunction module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html">wale.VarianceCalculator module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="wale.html">wale package</a></li>
+      <li class="breadcrumb-item active">wale.CommonUtils module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/wale.CommonUtils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-wale.CommonUtils">
+<span id="wale-commonutils-module"></span><h1>wale.CommonUtils module<a class="headerlink" href="#module-wale.CommonUtils" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.CommonUtils.apply_pixel_window">
+<span class="sig-prename descclassname"><span class="pre">wale.CommonUtils.</span></span><span class="sig-name descname"><span class="pre">apply_pixel_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ells</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_deg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/CommonUtils.html#apply_pixel_window"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.CommonUtils.apply_pixel_window" title="Link to this definition"></a></dt>
+<dd><p>Compute the pixel window function for a square map and apply it to multipoles.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ells</strong> (<em>array_like</em>) – Multipole values (ℓ) at which the window function is evaluated.</p></li>
+<li><p><strong>theta_deg</strong> (<em>float</em><em>, </em><em>optional</em>) – Total angular size of the map in degrees (default is 10.0).</p></li>
+<li><p><strong>npix</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of pixels per side of the square map (default is 1200).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>W_ell</strong> – The pixel window function evaluated at each ℓ.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.CommonUtils.compute_sigma_kappa_squared">
+<span class="sig-prename descclassname"><span class="pre">wale.CommonUtils.</span></span><span class="sig-name descname"><span class="pre">compute_sigma_kappa_squared</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">theta_arcmin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lensingweights</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">redshifts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pnl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/CommonUtils.html#compute_sigma_kappa_squared"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.CommonUtils.compute_sigma_kappa_squared" title="Link to this definition"></a></dt>
+<dd><p>Compute the smoothed convergence variance σ²_κ(θ) at a given angular scale using a filter.</p>
+<p>This function computes the convergence power spectrum P_κ(ℓ) from a 3D P(k, z)
+and integrates over ℓ using a top-hat or starlet filter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta_arcmin</strong> (<em>float</em>) – Angular smoothing scale θ in arcminutes.</p></li>
+<li><p><strong>chis</strong> (<em>ndarray</em>) – Comoving distances χ (in Mpc) corresponding to redshifts.</p></li>
+<li><p><strong>lensingweights</strong> (<em>ndarray</em>) – Lensing kernel W(χ) evaluated at each χ.</p></li>
+<li><p><strong>redshifts</strong> (<em>ndarray</em>) – Redshifts corresponding to chis.</p></li>
+<li><p><strong>k</strong> (<em>ndarray</em>) – Wavenumber grid (in h/Mpc).</p></li>
+<li><p><strong>pnl</strong> (<em>2D ndarray</em>) – Nonlinear power spectrum P(k, z), shape (n_z, len(k)).</p></li>
+<li><p><strong>filter_type</strong> (<em>str</em>) – Type of filter to apply (“tophat” or “starlet”).</p></li>
+<li><p><strong>h</strong> (<em>float</em>) – Reduced Hubble constant (H0 / 100).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>sigma2</strong> – Smoothed convergence variance σ²_κ(θ).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.CommonUtils.fourier_coordinate">
+<span class="sig-prename descclassname"><span class="pre">wale.CommonUtils.</span></span><span class="sig-name descname"><span class="pre">fourier_coordinate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/CommonUtils.html#fourier_coordinate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.CommonUtils.fourier_coordinate" title="Link to this definition"></a></dt>
+<dd><p>Return the 1D Fourier coordinate index corresponding to 2D (x, y) on a square map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>int</em>) – X-coordinate (horizontal index).</p></li>
+<li><p><strong>y</strong> (<em>int</em>) – Y-coordinate (vertical index).</p></li>
+<li><p><strong>map_size</strong> (<em>int</em>) – Size of one side of the square map.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>idx</strong> – Flattened Fourier-space index.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.CommonUtils.get_l1_from_pdf">
+<span class="sig-prename descclassname"><span class="pre">wale.CommonUtils.</span></span><span class="sig-name descname"><span class="pre">get_l1_from_pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">counts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/CommonUtils.html#get_l1_from_pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.CommonUtils.get_l1_from_pdf" title="Link to this definition"></a></dt>
+<dd><p>Compute the L1 norm (∫|x|P(x)dx) from a histogram representation of a PDF.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>counts</strong> (<em>ndarray</em>) – Histogram bin counts or PDF values (P(x)).</p></li>
+<li><p><strong>bins</strong> (<em>ndarray</em>) – Bin centers or values corresponding to the counts.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>l1_norm</strong> – L1 norm approximation (P(x) * <a href="#id1"><span class="problematic" id="id2">|x|</span></a> per bin).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.CommonUtils.get_moments">
+<span class="sig-prename descclassname"><span class="pre">wale.CommonUtils.</span></span><span class="sig-name descname"><span class="pre">get_moments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kappa_values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pdf_values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/CommonUtils.html#get_moments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.CommonUtils.get_moments" title="Link to this definition"></a></dt>
+<dd><p>Compute the first four moments of a given 1D probability distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kappa_values</strong> (<em>ndarray</em>) – Bin centers or sample points along the kappa (x-axis).</p></li>
+<li><p><strong>pdf_values</strong> (<em>ndarray</em>) – Corresponding PDF values at each kappa.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>mean_kappa</strong> (<em>float</em>) – Mean of the distribution.</p></li>
+<li><p><strong>variance</strong> (<em>float</em>) – Variance of the distribution.</p></li>
+<li><p><strong>S_3</strong> (<em>float</em>) – Skewness (third standardized moment).</p></li>
+<li><p><strong>K</strong> (<em>float</em>) – Kurtosis minus 3 (excess kurtosis).</p></li>
+<li><p><strong>norm</strong> (<em>float</em>) – Normalization constant of the input PDF.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="wale.html" class="btn btn-neutral float-left" title="wale package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wale.ComputePDF.html" class="btn btn-neutral float-right" title="wale.ComputePDF module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

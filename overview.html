@@ -1,0 +1,179 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WALE — Wavelet ℓ₁-norm Estimator &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="wale package" href="wale.html" />
+    <link rel="prev" title="Welcome to WALE’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">WALE — Wavelet ℓ₁-norm Estimator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#repository">Repository</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#features">Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quickstart">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#citation">Citation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.html">wale package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">WALE — Wavelet ℓ₁-norm Estimator</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/overview.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p><a class="reference external" href="https://github.com/vilasinits/WALE/actions"><img alt="CI" src="https://github.com/vilasinits/WALE/actions/workflows/ci.yml/badge.svg" /></a>  <a class="reference internal" href="#LICENSE"><span class="xref myst"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" /></span></a>  <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></p>
+<section id="wale-wavelet-l1-norm-estimator">
+<h1>WALE — Wavelet ℓ₁-norm Estimator<a class="headerlink" href="#wale-wavelet-l1-norm-estimator" title="Link to this heading"></a></h1>
+<p><strong>WALE</strong> (pronounced <em>WAL-E</em>) is a Python toolkit for predicting and analyzing the one-point statistics of the <strong>wavelet ℓ₁-norm</strong> in cosmological density fields. It combines theoretical predictions based on one-point PDF expansions with direct measurements on simulations or observational data, enabling robust multi-scale comparisons.</p>
+<hr class="docutils" />
+<section id="repository">
+<h2>Repository<a class="headerlink" href="#repository" title="Link to this heading"></a></h2>
+<p>Source code and issue tracker:<br />
+🔗 <a class="reference external" href="https://github.com/vilasinits/WALE">https://github.com/vilasinits/WALE</a></p>
+</section>
+<hr class="docutils" />
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Theoretical Predictions</strong><br />
+Derive analytical estimates of the wavelet ℓ₁-norm’s mean and variance using one-point PDF expansions rooted in Large Deviation Theory.</p></li>
+<li><p><strong>Wavelet Decomposition</strong><br />
+Perform multi-scale analysis with wavelet bases such as top-hat and starlet to extract scale-resolved information.</p></li>
+<li><p><strong>ℓ₁-norm Measurements</strong><br />
+Compute the ℓ₁-norm of wavelet coefficients on weak lensing convergence fields efficiently and accurately.</p></li>
+<li><p><strong>Theory vs. Simulation Comparison</strong><br />
+Built-in routines to overlay theoretical predictions with simulation results, including visualization tools and diagnostic metrics.</p></li>
+<li><p><strong>Modular API</strong><br />
+Clean, extensible architecture with dedicated modules for theory, analysis, I/O, and utility functions.</p></li>
+<li><p><strong>Parallel Processing (Coming Soon)</strong><br />
+MPI-based support for handling large cosmological datasets in parallel.</p></li>
+<li><p><strong>JAX Integration (Coming Soon)</strong><br />
+Accelerated computation and auto-differentiation via JAX for high-performance workflows.</p></li>
+</ul>
+</section>
+<hr class="docutils" />
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>Clone and install in editable mode:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vilasinits/WALE.git
+<span class="nb">cd</span><span class="w"> </span>WALE
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<section id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading"></a></h2>
+<p>Explore the example notebooks in the notebooks/ directory to see how WALE can be applied to theoretical predictions or real data analysis.</p>
+</section>
+<section id="citation">
+<h2>Citation<a class="headerlink" href="#citation" title="Link to this heading"></a></h2>
+<p>If you use WALE in your work, please cite:</p>
+<div class="highlight-bibtex notranslate"><div class="highlight"><pre><span></span><span class="nc">@ARTICLE</span><span class="p">{</span><span class="nl">2024A&amp;A...691A..80S</span><span class="p">,</span>
+<span class="w">  </span><span class="na">author</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{{Sreekanth}, Vilasini Tinnaneri and {Codis}, Sandrine and {Barthelemy}, Alexandre and {Starck}, Jean-Luc}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">title</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;{Theoretical wavelet {\ensuremath{\ell}}$_{1}$-norm from one-point probability density function prediction}&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{Astronomy &amp; Astrophysics}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">volume</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{691}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">eid</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{A80}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">pages</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{A80}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">year</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{2024}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">month</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nv">nov</span><span class="p">,</span>
+<span class="w">  </span><span class="na">doi</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{10.1051/0004-6361/202450061}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">archivePrefix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">eprint</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{2406.10033}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">primaryClass</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{astro-ph.CO}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to WALE’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wale.html" class="btn btn-neutral float-right" title="wale package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

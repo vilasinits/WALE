@@ -1,0 +1,278 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.LoadSimulations &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Repository</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#features">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#quickstart">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#citation">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../wale.html">wale package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wale.LoadSimulations</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wale.LoadSimulations</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.interpolate</span><span class="w"> </span><span class="kn">import</span> <span class="n">CubicSpline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.FilterFunctions</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_W2D_FL</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.CommonUtils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_l1_from_pdf</span>
+
+
+<div class="viewcode-block" id="get_smoothed_app_pdf">
+<a class="viewcode-back" href="../../wale.LoadSimulations.html#wale.LoadSimulations.get_smoothed_app_pdf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_smoothed_app_pdf</span><span class="p">(</span><span class="n">mass_map</span><span class="p">,</span> <span class="n">window_radius</span><span class="p">,</span> <span class="n">binedges</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies top-hat smoothing in Fourier space at two scales and returns the PDF of the difference map.</span>
+
+<span class="sd">    The map is filtered with a top-hat window of radius R and 2R, then the difference is computed.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        mass_map     : 2D numpy array.</span>
+<span class="sd">        window_radius: The smoothing scale (R) in physical units.</span>
+<span class="sd">        binedges     : Bin edges for the histogram.</span>
+<span class="sd">        L            : Physical size of the map (default 505 MPC/h).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple : (bin_edges, pdf_counts, difference_map)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;L&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;L&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">mass_map</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;tophat&quot;</span><span class="p">:</span>
+        <span class="n">W2D_1</span> <span class="o">=</span> <span class="n">get_W2D_FL</span><span class="p">(</span><span class="n">window_radius</span><span class="p">,</span> <span class="n">mass_map</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;tophat&quot;</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+        <span class="n">W2D_2</span> <span class="o">=</span> <span class="n">get_W2D_FL</span><span class="p">(</span><span class="n">window_radius</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mass_map</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;tophat&quot;</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+        <span class="c1"># Fourier transform the input mass map.</span>
+        <span class="n">field_ft</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">mass_map</span><span class="p">))</span>
+        <span class="c1"># Apply the window functions in Fourier space.</span>
+        <span class="n">smoothed_ft1</span> <span class="o">=</span> <span class="n">field_ft</span> <span class="o">*</span> <span class="n">W2D_1</span>
+        <span class="n">smoothed_ft2</span> <span class="o">=</span> <span class="n">field_ft</span> <span class="o">*</span> <span class="n">W2D_2</span>
+        <span class="c1"># Inverse Fourier transform to get back to real space.</span>
+        <span class="n">smoothed1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">smoothed_ft1</span><span class="p">))</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">smoothed2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">smoothed_ft2</span><span class="p">))</span><span class="o">.</span><span class="n">real</span>
+        <span class="c1"># Compute the difference map.</span>
+        <span class="n">difference_map</span> <span class="o">=</span> <span class="n">smoothed2</span> <span class="o">-</span> <span class="n">smoothed1</span>
+    <span class="k">elif</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;starlet&quot;</span><span class="p">:</span>
+        <span class="n">W2D_1</span> <span class="o">=</span> <span class="n">get_W2D_FL</span><span class="p">(</span><span class="n">window_radius</span><span class="p">,</span> <span class="n">mass_map</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;starlet&quot;</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+        <span class="n">W2D_2</span> <span class="o">=</span> <span class="n">get_W2D_FL</span><span class="p">(</span><span class="n">window_radius</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">mass_map</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;starlet&quot;</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+        <span class="c1"># Fourier transform the input mass map.</span>
+        <span class="n">field_ft</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">mass_map</span><span class="p">))</span>
+        <span class="c1"># Apply the window functions in Fourier space.</span>
+        <span class="n">smoothed_ft1</span> <span class="o">=</span> <span class="n">field_ft</span> <span class="o">*</span> <span class="n">W2D_1</span>
+        <span class="n">smoothed_ft2</span> <span class="o">=</span> <span class="n">field_ft</span> <span class="o">*</span> <span class="n">W2D_2</span>
+        <span class="c1"># Inverse Fourier transform to get back to real space.</span>
+        <span class="n">smoothed1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">smoothed_ft1</span><span class="p">))</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">smoothed2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">smoothed_ft2</span><span class="p">))</span><span class="o">.</span><span class="n">real</span>
+        <span class="c1"># Compute the difference map.</span>
+        <span class="n">difference_map</span> <span class="o">=</span> <span class="n">smoothed2</span> <span class="o">-</span> <span class="n">smoothed1</span>
+
+    <span class="n">counts</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">difference_map</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">binedges</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">binedges</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">difference_map</span></div>
+
+
+
+<div class="viewcode-block" id="get_simulation_l1">
+<a class="viewcode-back" href="../../wale.LoadSimulations.html#wale.LoadSimulations.get_simulation_l1">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_simulation_l1</span><span class="p">(</span>
+    <span class="n">cosmo_index_to_run</span><span class="p">,</span>
+    <span class="n">tomobin</span><span class="p">,</span>
+    <span class="n">edges</span><span class="p">,</span>
+    <span class="n">centers</span><span class="p">,</span>
+    <span class="n">snr</span><span class="p">,</span>
+    <span class="n">R_pixels</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">filter_type</span><span class="o">=</span><span class="s2">&quot;tophat&quot;</span><span class="p">,</span>
+    <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load simulation data for a specific cosmology and compute L1 norms and PDFs.</span>
+<span class="sd">    Parameters:</span>
+<span class="sd">    - cosmo_index_to_run: Index of the cosmology to run (0-9 for 10 different cosmologies).</span>
+<span class="sd">    - R_pixels: Physical scale in pixels for smoothing.</span>
+<span class="sd">    - filter_type: Type of filter to use for smoothing (&#39;tophat&#39; or &#39;gaussian&#39;).</span>
+<span class="sd">    Returns:</span>
+<span class="sd">    - sim_l1_runs: Array of L1 norms for each simulation realization.</span>
+<span class="sd">    - sim_pdf_runs: Array of PDF counts for each simulation realization.</span>
+<span class="sd">    - avg_sim_l1: Average L1 norm across all realizations.</span>
+<span class="sd">    - std_sim_l1: Standard deviation of L1 norms across realizations.</span>
+<span class="sd">    - avg_sim_pdf: Average PDF counts across all realizations.</span>
+<span class="sd">    - std_sim_pdf: Standard deviation of PDF counts across realizations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Load simulation data for this cosmology</span>
+    <span class="n">sim_l1_runs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">snr</span><span class="p">)))</span>
+    <span class="n">sim_pdf_runs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">snr</span><span class="p">)))</span>
+    <span class="n">sim_sigmasq_runs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">snr</span><span class="p">)))</span>
+    <span class="c1"># ell_bins_runs = np.zeros((5, len(edges) - 1))</span>
+    <span class="c1"># cls_runs = []</span>
+    <span class="n">simvar</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>  <span class="c1"># Loop over 10 simulation realizations</span>
+        <span class="n">los_cone_filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;GalCatalog_LOS_cone</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_bin</span><span class="si">{</span><span class="n">tomobin</span><span class="si">}</span><span class="s2">.npy&quot;</span>
+        <span class="k">if</span> <span class="n">cosmo_index_to_run</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="n">map_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;/feynman/work/dap/lcs/share/at/mass_maps/0</span><span class="si">{</span><span class="n">cosmo_index_to_run</span><span class="si">}</span><span class="s2">_a/</span><span class="si">{</span><span class="n">los_cone_filename</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">map_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;/feynman/work/dap/lcs/share/at/mass_maps/</span><span class="si">{</span><span class="n">cosmo_index_to_run</span><span class="si">}</span><span class="s2">_a/</span><span class="si">{</span><span class="n">los_cone_filename</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># print(f&quot;  Loading map: {map_path}&quot;) # Optional: for debugging</span>
+            <span class="n">mass_map_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">map_path</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">diff_map</span> <span class="o">=</span> <span class="n">get_smoothed_app_pdf</span><span class="p">(</span>
+                <span class="n">mass_map_data</span><span class="p">,</span> <span class="n">R_pixels</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">filter_type</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Calculate L1 norm for this realization</span>
+            <span class="n">map_variance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">diff_map</span><span class="p">)</span>
+            <span class="n">map_stdev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">map_variance</span><span class="p">)</span>
+            <span class="n">simvar</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">map_variance</span><span class="p">)</span>
+
+            <span class="n">kappa_over_sigma</span> <span class="o">=</span> <span class="n">centers</span> <span class="o">/</span> <span class="n">map_stdev</span>
+            <span class="n">l1_values</span> <span class="o">=</span> <span class="n">get_l1_from_pdf</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="n">centers</span><span class="p">)</span>
+            <span class="c1"># Interpolate L1 onto the common SNR grid</span>
+            <span class="n">sim_l1_spline</span> <span class="o">=</span> <span class="n">CubicSpline</span><span class="p">(</span><span class="n">kappa_over_sigma</span><span class="p">,</span> <span class="n">l1_values</span><span class="p">,</span> <span class="n">extrapolate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">sim_pdf_spline</span> <span class="o">=</span> <span class="n">CubicSpline</span><span class="p">(</span><span class="n">kappa_over_sigma</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">extrapolate</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">sim_l1_runs</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">sim_l1_spline</span><span class="p">(</span>
+                <span class="n">snr</span>
+            <span class="p">)</span>  <span class="c1"># Store interpolated L1 for this run</span>
+            <span class="n">sim_pdf_runs</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">sim_pdf_spline</span><span class="p">(</span>
+                <span class="n">snr</span>
+            <span class="p">)</span>  <span class="c1"># Store interpolated PDF counts for this run</span>
+            <span class="n">sim_sigmasq_runs</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_stdev</span>  <span class="c1"># Store variance for this run</span>
+
+            <span class="c1"># _, ell_bins, cls_values = calculate_Cls(mass_map_data, 10, 10, 1e3, 60)</span>
+            <span class="c1"># print(&quot;the ell_bins shape: &quot;, ell_bins.shape, &quot;and :&quot;, ell_bins[0])</span>
+            <span class="c1"># cls_runs.append(cls_values)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Warning: File not found </span><span class="si">{</span><span class="n">map_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Average over simulation realizations</span>
+    <span class="n">avg_sim_pdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">sim_pdf_runs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">std_sim_pdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">sim_pdf_runs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">avg_sim_l1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">sim_l1_runs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">std_sim_l1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanstd</span><span class="p">(</span><span class="n">sim_l1_runs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">snr</span><span class="p">,</span> <span class="n">avg_sim_l1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Average L1 Norm&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;blue&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">snr</span><span class="p">,</span> <span class="n">sim_l1_runs</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;cornflowerblue&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span>
+        <span class="p">)</span>  <span class="c1"># Plot individual runs with transparency</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;L1 Norm&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;SNR&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;L1 Norm&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">snr</span><span class="p">,</span> <span class="n">avg_sim_pdf</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Average PDF Counts&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;orange&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">snr</span><span class="p">,</span> <span class="n">sim_pdf_runs</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gold&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span>
+        <span class="p">)</span>  <span class="c1"># Plot individual runs with transparency</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;PDF Counts&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;SNR&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;PDF Counts&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sim_l1_runs</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sim_pdf_runs</span><span class="p">),</span>
+        <span class="n">avg_sim_l1</span><span class="p">,</span>
+        <span class="n">std_sim_l1</span><span class="p">,</span>
+        <span class="n">avg_sim_pdf</span><span class="p">,</span>
+        <span class="n">std_sim_pdf</span><span class="p">,</span>
+        <span class="c1"># ell_bins,</span>
+        <span class="c1"># np.array(cls_runs),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">simvar</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

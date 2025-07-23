@@ -1,0 +1,230 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale package &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="wale.CommonUtils module" href="wale.CommonUtils.html" />
+    <link rel="prev" title="WALE — Wavelet ℓ₁-norm Estimator" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">WALE — Wavelet ℓ₁-norm Estimator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">wale package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="wale.CommonUtils.html">wale.CommonUtils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html">wale.ComputePDF module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html">wale.CosmologyModel module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CovarianceMatrix.html">wale.CovarianceMatrix module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CriticalPoints.html">wale.CriticalPoints module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.FilterFunctions.html">wale.FilterFunctions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.InitializeVariables.html">wale.InitializeVariables module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.LoadSimulations.html">wale.LoadSimulations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.RateFunction.html">wale.RateFunction module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html">wale.VarianceCalculator module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">wale package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/wale.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-wale">
+<span id="wale-package"></span><h1>wale package<a class="headerlink" href="#module-wale" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wale.CommonUtils.html">wale.CommonUtils module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.CommonUtils.html#wale.CommonUtils.apply_pixel_window"><code class="docutils literal notranslate"><span class="pre">apply_pixel_window()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.CommonUtils.html#wale.CommonUtils.compute_sigma_kappa_squared"><code class="docutils literal notranslate"><span class="pre">compute_sigma_kappa_squared()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.CommonUtils.html#wale.CommonUtils.fourier_coordinate"><code class="docutils literal notranslate"><span class="pre">fourier_coordinate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.CommonUtils.html#wale.CommonUtils.get_l1_from_pdf"><code class="docutils literal notranslate"><span class="pre">get_l1_from_pdf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.CommonUtils.html#wale.CommonUtils.get_moments"><code class="docutils literal notranslate"><span class="pre">get_moments()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.ComputePDF.html">wale.ComputePDF module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF"><code class="docutils literal notranslate"><span class="pre">computePDF</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.variables"><code class="docutils literal notranslate"><span class="pre">computePDF.variables</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.variance"><code class="docutils literal notranslate"><span class="pre">computePDF.variance</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.plot_scgf"><code class="docutils literal notranslate"><span class="pre">computePDF.plot_scgf</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.pdf_values"><code class="docutils literal notranslate"><span class="pre">computePDF.pdf_values</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.kappa_values"><code class="docutils literal notranslate"><span class="pre">computePDF.kappa_values</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.compute_pdf_for_kappa"><code class="docutils literal notranslate"><span class="pre">computePDF.compute_pdf_for_kappa()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.compute_pdf_values"><code class="docutils literal notranslate"><span class="pre">computePDF.compute_pdf_values()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.compute_phi_values"><code class="docutils literal notranslate"><span class="pre">computePDF.compute_phi_values()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html#wale.ComputePDF.computePDF.get_scgf"><code class="docutils literal notranslate"><span class="pre">computePDF.get_scgf()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.CosmologyModel.html">wale.CosmologyModel module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function"><code class="docutils literal notranslate"><span class="pre">Cosmology_function</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function.get_H"><code class="docutils literal notranslate"><span class="pre">Cosmology_function.get_H()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function.get_chi"><code class="docutils literal notranslate"><span class="pre">Cosmology_function.get_chi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function.get_lensing_weight"><code class="docutils literal notranslate"><span class="pre">Cosmology_function.get_lensing_weight()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function.get_lensing_weight_array"><code class="docutils literal notranslate"><span class="pre">Cosmology_function.get_lensing_weight_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function.get_lensing_weight_array_nz"><code class="docutils literal notranslate"><span class="pre">Cosmology_function.get_lensing_weight_array_nz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function.get_nonlinear_pk"><code class="docutils literal notranslate"><span class="pre">Cosmology_function.get_nonlinear_pk()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html#wale.CosmologyModel.Cosmology_function.get_z_from_chi"><code class="docutils literal notranslate"><span class="pre">Cosmology_function.get_z_from_chi()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.CovarianceMatrix.html">wale.CovarianceMatrix module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.CovarianceMatrix.html#wale.CovarianceMatrix.get_covariance"><code class="docutils literal notranslate"><span class="pre">get_covariance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.CriticalPoints.html">wale.CriticalPoints module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.CriticalPoints.html#wale.CriticalPoints.CriticalPointsFinder"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="wale.CriticalPoints.html#wale.CriticalPoints.CriticalPointsFinder.find_zero_crossing_point"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.find_zero_crossing_point()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CriticalPoints.html#wale.CriticalPoints.CriticalPointsFinder.find_zero_crossings"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.find_zero_crossings()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CriticalPoints.html#wale.CriticalPoints.CriticalPointsFinder.get_critical_points"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.get_critical_points()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CriticalPoints.html#wale.CriticalPoints.CriticalPointsFinder.get_hessian"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.get_hessian()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="wale.CriticalPoints.html#wale.CriticalPoints.find_critical_points_for_cosmo"><code class="docutils literal notranslate"><span class="pre">find_critical_points_for_cosmo()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.CriticalPoints.html#wale.CriticalPoints.find_smallest_pair"><code class="docutils literal notranslate"><span class="pre">find_smallest_pair()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.FilterFunctions.html">wale.FilterFunctions module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.S"><code class="docutils literal notranslate"><span class="pre">S()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.S_scalar"><code class="docutils literal notranslate"><span class="pre">S_scalar()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.b3_1D_ft"><code class="docutils literal notranslate"><span class="pre">b3_1D_ft()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.b3_2D_ft"><code class="docutils literal notranslate"><span class="pre">b3_2D_ft()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.get_W2D_FL"><code class="docutils literal notranslate"><span class="pre">get_W2D_FL()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.starlet_filter"><code class="docutils literal notranslate"><span class="pre">starlet_filter()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.top_hat_filter"><code class="docutils literal notranslate"><span class="pre">top_hat_filter()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.FilterFunctions.html#wale.FilterFunctions.uHat_starlet_analytical"><code class="docutils literal notranslate"><span class="pre">uHat_starlet_analytical()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.InitializeVariables.html">wale.InitializeVariables module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.InitializeVariables.html#wale.InitializeVariables.InitialiseVariables"><code class="docutils literal notranslate"><span class="pre">InitialiseVariables</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.LoadSimulations.html">wale.LoadSimulations module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.LoadSimulations.html#wale.LoadSimulations.get_simulation_l1"><code class="docutils literal notranslate"><span class="pre">get_simulation_l1()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.LoadSimulations.html#wale.LoadSimulations.get_smoothed_app_pdf"><code class="docutils literal notranslate"><span class="pre">get_smoothed_app_pdf()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.RateFunction.html">wale.RateFunction module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_phi_projec_2cell"><code class="docutils literal notranslate"><span class="pre">get_phi_projec_2cell()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_psi_2cell"><code class="docutils literal notranslate"><span class="pre">get_psi_2cell()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_psi_2nd_derivative_delta1"><code class="docutils literal notranslate"><span class="pre">get_psi_2nd_derivative_delta1()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_psi_2nd_derivative_delta2"><code class="docutils literal notranslate"><span class="pre">get_psi_2nd_derivative_delta2()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_psi_derivative_delta1"><code class="docutils literal notranslate"><span class="pre">get_psi_derivative_delta1()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_psi_derivative_delta2"><code class="docutils literal notranslate"><span class="pre">get_psi_derivative_delta2()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_psi_mixed_derivative_delta1_delta2"><code class="docutils literal notranslate"><span class="pre">get_psi_mixed_derivative_delta1_delta2()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_scaled_cgf"><code class="docutils literal notranslate"><span class="pre">get_scaled_cgf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.get_tau"><code class="docutils literal notranslate"><span class="pre">get_tau()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wale.RateFunction.html#wale.RateFunction.psi_derivative_determinant"><code class="docutils literal notranslate"><span class="pre">psi_derivative_determinant()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wale.VarianceCalculator.html">wale.VarianceCalculator module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance"><code class="docutils literal notranslate"><span class="pre">Variance</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.cosmo"><code class="docutils literal notranslate"><span class="pre">Variance.cosmo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.PK_interpolator_linear"><code class="docutils literal notranslate"><span class="pre">Variance.PK_interpolator_linear</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.PK_interpolator_nonlinear"><code class="docutils literal notranslate"><span class="pre">Variance.PK_interpolator_nonlinear</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.model"><code class="docutils literal notranslate"><span class="pre">Variance.model</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.get_sig_slice"><code class="docutils literal notranslate"><span class="pre">Variance.get_sig_slice()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.linear_sigma2"><code class="docutils literal notranslate"><span class="pre">Variance.linear_sigma2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.nonlinear_sigma2"><code class="docutils literal notranslate"><span class="pre">Variance.nonlinear_sigma2()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-left" title="WALE — Wavelet ℓ₁-norm Estimator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wale.CommonUtils.html" class="btn btn-neutral float-right" title="wale.CommonUtils module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

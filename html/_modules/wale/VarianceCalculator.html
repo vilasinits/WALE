@@ -1,0 +1,249 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.VarianceCalculator &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Repository</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#features">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#quickstart">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html#citation">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../wale.html">wale package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wale.VarianceCalculator</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wale.VarianceCalculator</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.integrate</span><span class="w"> </span><span class="kn">import</span> <span class="n">simpson</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyccl</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ccl</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.FilterFunctions</span><span class="w"> </span><span class="kn">import</span> <span class="n">top_hat_filter</span><span class="p">,</span> <span class="n">starlet_filter</span>
+
+
+<div class="viewcode-block" id="Variance">
+<a class="viewcode-back" href="../../wale.VarianceCalculator.html#wale.VarianceCalculator.Variance">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Variance</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class to compute linear and nonlinear variance using power spectrum interpolators and a specific cosmological model.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        cosmo (Cosmology): An instance of a cosmology class providing necessary cosmological functions and parameters.</span>
+<span class="sd">        PK_interpolator_linear (Interpolator): An interpolator instance for linear power spectrum calculations.</span>
+<span class="sd">        PK_interpolator_nonlinear (Interpolator): An interpolator instance for nonlinear power spectrum calculations.</span>
+<span class="sd">        model (str): The name of the cosmological model to be used for variance calculations.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cosmo</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">,</span> <span class="n">pk</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the Variance class with cosmology and parameters for P(k) calculation.</span>
+<span class="sd">        Calculates the non-linear power spectrum, including cosmic variance noise if volume is specified.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            cosmo (Cosmology_function): An instance of the cosmology class.</span>
+<span class="sd">            z_values (array-like): Redshifts for lensing planes/primary calculations.</span>
+<span class="sd">            volume (float, optional): Volume for cosmic variance calculation in (Mpc/h)^3. Defaults to None (no CV noise).</span>
+<span class="sd">            delta_A0 (float, optional): Parameter for additional non-Gaussian noise. Defaults to 1.9.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span> <span class="o">=</span> <span class="n">cosmo</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter_type</span> <span class="o">=</span> <span class="n">filter_type</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Variance module initialized...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pk</span> <span class="o">=</span> <span class="n">pk</span>
+
+<div class="viewcode-block" id="Variance.linear_sigma2">
+<a class="viewcode-back" href="../../wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.linear_sigma2">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">linear_sigma2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">redshift</span><span class="p">,</span> <span class="n">R1</span><span class="p">,</span> <span class="n">R2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the linear variance σ² for given scales and redshift, considering the specified model adjustments.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            redshift (float): The redshift at which to evaluate the variance.</span>
+<span class="sd">            R1 (float): The first scale radius.</span>
+<span class="sd">            R2 (float, optional): The second scale radius. Defaults to R1 if not specified.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: The linear variance σ² at the given scales and redshift.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">R2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">R2</span> <span class="o">=</span> <span class="n">R1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">R2</span> <span class="o">=</span> <span class="n">R2</span>
+
+        <span class="c1"># pk = self.PK_interpolator_linear.P(redshift, self.cosmo.k_values)</span>
+        <span class="n">pk</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">ccl</span><span class="o">.</span><span class="n">linear_matter_power</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">cosmoccl</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">redshift</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">h</span><span class="o">**</span><span class="mi">3</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;tophat&quot;</span><span class="p">:</span>
+            <span class="n">w1_2D</span> <span class="o">=</span> <span class="n">top_hat_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R1</span><span class="p">)</span>
+            <span class="n">w2_2D</span> <span class="o">=</span> <span class="n">top_hat_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+            <span class="n">w2</span> <span class="o">=</span> <span class="n">w1_2D</span> <span class="o">*</span> <span class="n">w2_2D</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;starlet&quot;</span><span class="p">:</span>
+            <span class="n">w1_2D</span> <span class="o">=</span> <span class="n">starlet_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R1</span><span class="p">)</span>
+            <span class="n">w2_2D</span> <span class="o">=</span> <span class="n">starlet_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+            <span class="n">w2</span> <span class="o">=</span> <span class="n">w1_2D</span> <span class="o">*</span> <span class="n">w2_2D</span>
+        <span class="n">constant</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">integrand</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k_values</span> <span class="o">*</span> <span class="n">pk</span> <span class="o">*</span> <span class="n">w2</span> <span class="o">*</span> <span class="n">constant</span>
+        <span class="k">return</span> <span class="n">simpson</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k_values</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Variance.nonlinear_sigma2">
+<a class="viewcode-back" href="../../wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.nonlinear_sigma2">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">nonlinear_sigma2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">redshift</span><span class="p">,</span> <span class="n">R1</span><span class="p">,</span> <span class="n">R2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the nonlinear variance σ² for given scales and redshift, considering the specified model adjustments.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            redshift (float): The redshift at which to evaluate the variance.</span>
+<span class="sd">            R1 (float): The first scale radius.</span>
+<span class="sd">            R2 (float, optional): The second scale radius. Defaults to R1 if not specified.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: The nonlinear variance σ² at the given scales and redshift.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">R2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">R2</span> <span class="o">=</span> <span class="n">R1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">R2</span> <span class="o">=</span> <span class="n">R2</span>
+        <span class="c1"># pk = kwargs.get(&quot;pk&quot;, self.pk[redshift])</span>
+        <span class="n">pk</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;pk&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;pk&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">pk</span><span class="p">[</span><span class="n">redshift</span><span class="p">]</span>
+
+        <span class="c1"># pk = self.pk[redshift]</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">h</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;tophat&quot;</span><span class="p">:</span>
+            <span class="n">w1_2D</span> <span class="o">=</span> <span class="n">top_hat_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R1</span><span class="p">)</span>
+            <span class="n">w2_2D</span> <span class="o">=</span> <span class="n">top_hat_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+
+            <span class="n">w2</span> <span class="o">=</span> <span class="n">w1_2D</span> <span class="o">*</span> <span class="n">w2_2D</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;starlet&quot;</span><span class="p">:</span>
+            <span class="n">w1_2D</span> <span class="o">=</span> <span class="n">starlet_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R1</span><span class="p">)</span>
+            <span class="n">w2_2D</span> <span class="o">=</span> <span class="n">starlet_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+
+            <span class="n">w2</span> <span class="o">=</span> <span class="n">w1_2D</span> <span class="o">*</span> <span class="n">w2_2D</span>
+        <span class="n">constant</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">integrand</span> <span class="o">=</span> <span class="n">k</span> <span class="o">*</span> <span class="n">pk</span> <span class="o">*</span> <span class="n">w2</span> <span class="o">*</span> <span class="n">constant</span>
+        <span class="k">return</span> <span class="n">simpson</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">k</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">cosmo</span><span class="o">.</span><span class="n">h</span></div>
+
+
+<div class="viewcode-block" id="Variance.get_sig_slice">
+<a class="viewcode-back" href="../../wale.VarianceCalculator.html#wale.VarianceCalculator.Variance.get_sig_slice">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_sig_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">R1</span><span class="p">,</span> <span class="n">R2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the slice variance σ² for the given scales and redshift in the nonlinear regime.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            z (float): The redshift at which to evaluate the slice variance.</span>
+<span class="sd">            R1 (float): The first scale radius.</span>
+<span class="sd">            R2 (float): The second scale radius.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            float: The slice variance σ² at the given scales and redshift.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;tophat&quot;</span><span class="p">:</span>
+            <span class="n">sigslice</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nonlinear_sigma2</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">R1</span><span class="p">)</span>
+                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nonlinear_sigma2</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+                <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nonlinear_sigma2</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">R1</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">sigslice</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;starlet&quot;</span><span class="p">:</span>
+            <span class="n">sigslice</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nonlinear_sigma2</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">R1</span><span class="p">)</span>
+                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nonlinear_sigma2</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+                <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nonlinear_sigma2</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">R1</span><span class="p">,</span> <span class="n">R2</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">sigslice</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

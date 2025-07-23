@@ -1,0 +1,152 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overview &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">WALE — Wavelet ℓ₁-norm Estimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wale.html">wale package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/README.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">WALE</span></code> package provides a theoretical framework to model the wavelet ℓ₁-norm of weak lensing convergence maps. This is achieved using predictions of the one-point probability distribution function (PDF) at each wavelet scale, based on large-deviation theory (LDT). The method enables simulation-free inference of higher-order statistics in cosmological fields.</p>
+<p>📘 API Documentation: https://vilasinits.github.io/WALE/</p>
+<p>This tool supports the analysis presented in the paper:
+<em>Theoretical wavelet ℓ₁-norm from one-point probability density function prediction</em>, A&amp;A 678, A116 (2024).<br />
+A&amp;A Article: https://www.aanda.org/articles/aa/full_html/2024/11/aa50061-24/aa50061-24.html</p>
+<section id="development-status">
+<h2>Development Status<a class="headerlink" href="#development-status" title="Link to this heading"></a></h2>
+<p>The package is in its <strong>initial phase</strong> and several features are still being tested, including:</p>
+<ul class="simple">
+<li><p>A model for incorporating <strong>stochasticity</strong></p></li>
+<li><p>Support for real data inputs</p></li>
+<li><p>Extension to additional filtering schemes</p></li>
+</ul>
+</section>
+<section id="key-features">
+<h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Predicts the expected ℓ₁-norm at each wavelet scale from theory</p></li>
+<li><p>Includes a model for incorporating <strong>stochasticity</strong>, currently under testing</p></li>
+<li><p>Modular</p></li>
+</ul>
+<p>Modules include:</p>
+<ul class="simple">
+<li><p>l1-norm computation</p></li>
+<li><p>Cosmology I/O and preprocessing</p></li>
+<li><p>Covariance modeling</p></li>
+</ul>
+<p>Use this package for reproducibility of results in the paper or to apply the method to new data or simulations.</p>
+</section>
+<section id="how-to-cite">
+<h2>How to Cite<a class="headerlink" href="#how-to-cite" title="Link to this heading"></a></h2>
+<p>If you use this code for your research, please cite the following paper:</p>
+<p>Vilasini Tinnaneri Sreekanth, <em>Theoretical wavelet ℓ₁-norm from one-point probability density function prediction</em>,<br />
+Astronomy &amp; Astrophysics, Volume 678, November 2024, A116.<br />
+DOI: https://doi.org/10.1051/0004-6361/202450061</p>
+</section>
+<section id="contact">
+<h2>Contact<a class="headerlink" href="#contact" title="Link to this heading"></a></h2>
+<p>Please feel free to reach out to <strong>tsvilasini97&#64;gmail.com</strong> in case of any bugs or questions regarding usage.</p>
+</section>
+<section id="how-to-install">
+<h2>How to Install<a class="headerlink" href="#how-to-install" title="Link to this heading"></a></h2>
+<p>Clone the repo and run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
