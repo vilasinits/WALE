@@ -3,14 +3,12 @@ from astropy import units as u
 from .CosmologyModel import Cosmology_function
 from .CovarianceMatrix import *
 
-# from wale.VarianceCalculator import Variance
-
 
 class InitialiseVariables:
     def __init__(
         self, h, Oc, Ob, w, wa, sigma8, dk, kmin, kmax, nplanes, theta1, **kwargs
     ):
-        '''
+        """
         Initialise variables for WALE.
         Parameters:
         - h: Hubble constant (dimensionless)
@@ -25,14 +23,14 @@ class InitialiseVariables:
         - nplanes: Number of lens planes (integer)
         - theta1: Angular scale in arcminutes (float)
         - **kwargs: Additional keyword arguments (optional)
-        
+
         Calculates:
         - Angular scales in radians
         - Comoving distances for lens planes
         - Lensing weights based on source redshift or redshift distribution file
         - Covariance matrix or single P_nl based on variability flag
         - Initializes Cosmology_function with provided parameters
-        '''
+        """
         # Initialise cosmology
         self.cosmo = Cosmology_function(
             h=h,

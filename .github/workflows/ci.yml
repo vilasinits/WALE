@@ -25,3 +25,7 @@ jobs:
 
       - name: Run pytest
         run: pytest --maxfail=1 --disable-warnings -q
+      
+      - name: Run black (code formatting check)
+        run: |
+          black --check src/

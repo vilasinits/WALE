@@ -19,7 +19,9 @@
       <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="wale.FilterFunctions module" href="wale.FilterFunctions.html" />
+    <link rel="prev" title="wale.CovarianceMatrix module" href="wale.CovarianceMatrix.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,22 +43,37 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">wale.CriticalPoints module</a><ul>
-<li><a class="reference internal" href="#wale.CriticalPoints.CriticalPointsFinder"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder</span></code></a><ul>
-<li><a class="reference internal" href="#wale.CriticalPoints.CriticalPointsFinder.find_zero_crossing_point"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.find_zero_crossing_point()</span></code></a></li>
-<li><a class="reference internal" href="#wale.CriticalPoints.CriticalPointsFinder.find_zero_crossings"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.find_zero_crossings()</span></code></a></li>
-<li><a class="reference internal" href="#wale.CriticalPoints.CriticalPointsFinder.get_critical_points"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.get_critical_points()</span></code></a></li>
-<li><a class="reference internal" href="#wale.CriticalPoints.CriticalPointsFinder.get_hessian"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder.get_hessian()</span></code></a></li>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Repository</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html#features">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html#quickstart">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html#citation">Citation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="wale.html">wale package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="wale.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="wale.CommonUtils.html">wale.CommonUtils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html">wale.ComputePDF module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html">wale.CosmologyModel module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CovarianceMatrix.html">wale.CovarianceMatrix module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">wale.CriticalPoints module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CriticalPoints.CriticalPointsFinder"><code class="docutils literal notranslate"><span class="pre">CriticalPointsFinder</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CriticalPoints.find_critical_points_for_cosmo"><code class="docutils literal notranslate"><span class="pre">find_critical_points_for_cosmo()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.CriticalPoints.find_smallest_pair"><code class="docutils literal notranslate"><span class="pre">find_smallest_pair()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#wale.CriticalPoints.find_critical_points_for_cosmo"><code class="docutils literal notranslate"><span class="pre">find_critical_points_for_cosmo()</span></code></a></li>
-<li><a class="reference internal" href="#wale.CriticalPoints.find_smallest_pair"><code class="docutils literal notranslate"><span class="pre">find_smallest_pair()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.FilterFunctions.html">wale.FilterFunctions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.InitializeVariables.html">wale.InitializeVariables module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.LoadSimulations.html">wale.LoadSimulations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.RateFunction.html">wale.RateFunction module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.SpareCode.html">wale.SpareCode module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html">wale.VarianceCalculator module</a></li>
 </ul>
 </li>
 </ul>
-</div>
+</li>
+</ul>
+
         </div>
       </div>
     </nav>
@@ -71,6 +88,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="wale.html">wale package</a></li>
       <li class="breadcrumb-item active">wale.CriticalPoints module</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/wale.CriticalPoints.rst.txt" rel="nofollow"> View page source</a>
@@ -197,7 +215,10 @@ These points help identify the values of <span class="math notranslate nohighlig
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="wale.CovarianceMatrix.html" class="btn btn-neutral float-left" title="wale.CovarianceMatrix module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wale.FilterFunctions.html" class="btn btn-neutral float-right" title="wale.FilterFunctions module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
