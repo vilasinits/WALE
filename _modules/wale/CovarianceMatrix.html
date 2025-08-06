@@ -1,0 +1,294 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.CovarianceMatrix &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">WALE — Wavelet ℓ₁-norm Estimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../wale.html">wale package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wale.CovarianceMatrix</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wale.CovarianceMatrix</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyccl</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ccl</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyccl.halos.pk_4pt</span><span class="w"> </span><span class="kn">import</span> <span class="n">halomod_Tk3D_4h</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyccl.halos.pk_4pt</span><span class="w"> </span><span class="kn">import</span> <span class="n">halomod_Tk3D_cNG</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.integrate</span><span class="w"> </span><span class="kn">import</span> <span class="n">quad</span>
+
+
+<div class="viewcode-block" id="get_covariance">
+<a class="viewcode-back" href="../../wale.CovarianceMatrix.html#wale.CovarianceMatrix.get_covariance">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_covariance</span><span class="p">(</span><span class="n">cosmo</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">variability</span><span class="p">,</span> <span class="n">numberofrealisations</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the nonlinear matter power spectrum P(k) and optionally its covariance</span>
+<span class="sd">    using halo model trispectrum contributions.</span>
+
+<span class="sd">    If `variability` is enabled, the function uses the halo model (via pyccl) to</span>
+<span class="sd">    compute the connected non-Gaussian trispectrum and generate power spectrum</span>
+<span class="sd">    realizations by sampling from a multivariate Gaussian distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cosmo : Cosmology_function</span>
+<span class="sd">        A Cosmology_function object that wraps pyccl and includes nonlinear P(k) access,</span>
+<span class="sd">        k-grid, and other cosmological parameters.</span>
+<span class="sd">    z : array_like</span>
+<span class="sd">        Array of redshift values at which the power spectrum is evaluated.</span>
+<span class="sd">    variability : bool</span>
+<span class="sd">        Whether to compute and include non-Gaussian covariance (trispectrum) and</span>
+<span class="sd">        draw realizations of P(k) using a halo model.</span>
+<span class="sd">    numberofrealisations : int</span>
+<span class="sd">        Number of mock realizations to draw for each redshift (if `variability=True`).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    if variability is True:</span>
+<span class="sd">        cov_dict : dict</span>
+<span class="sd">            Dictionary mapping redshift z to full covariance matrix C(k, k&#39;).</span>
+<span class="sd">        pk_samples_dict : dict</span>
+<span class="sd">            Dictionary mapping redshift z to an array of shape (N, nk) containing N sampled</span>
+<span class="sd">            realizations of P(k).</span>
+<span class="sd">        pk_dict : dict</span>
+<span class="sd">            Dictionary mapping redshift z to the mean nonlinear P(k) at that redshift.</span>
+<span class="sd">    else:</span>
+<span class="sd">        pk_dict : dict</span>
+<span class="sd">            Dictionary mapping redshift z to the mean nonlinear P(k) at that redshift.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Lbox</span> <span class="o">=</span> <span class="mi">505</span>  <span class="c1"># Mpc/h</span>
+    <span class="n">vol</span> <span class="o">=</span> <span class="n">Lbox</span><span class="o">**</span><span class="mi">3</span>
+
+    <span class="n">Nmodes</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">vol</span>
+        <span class="o">/</span> <span class="mi">3</span>
+        <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="o">*</span> <span class="p">((</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span> <span class="o">+</span> <span class="n">cosmo</span><span class="o">.</span><span class="n">dk</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">-</span> <span class="p">(</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span> <span class="o">-</span> <span class="n">cosmo</span><span class="o">.</span><span class="n">dk</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="p">)</span>  <span class="c1"># Number of k-modes in shells</span>
+
+    <span class="n">sf</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">z</span><span class="p">)</span>
+    <span class="c1"># 2) get the sorting indices for ascending order</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">sf</span><span class="p">)</span>
+    <span class="c1"># 3) reorder</span>
+    <span class="n">scale_factor</span> <span class="o">=</span> <span class="n">sf</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+    <span class="n">Pnl</span> <span class="o">=</span> <span class="n">cosmo</span><span class="o">.</span><span class="n">get_nonlinear_pk</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">variability</span><span class="p">:</span>
+        <span class="c1"># We will use a mass definition with Delta = 200 times the matter density</span>
+        <span class="n">hmd_200m</span> <span class="o">=</span> <span class="s2">&quot;200m&quot;</span>
+
+        <span class="c1"># The Duffy 2008 concentration-mass relation</span>
+        <span class="n">cM</span> <span class="o">=</span> <span class="n">ccl</span><span class="o">.</span><span class="n">halos</span><span class="o">.</span><span class="n">ConcentrationDuffy08</span><span class="p">(</span><span class="n">mass_def</span><span class="o">=</span><span class="n">hmd_200m</span><span class="p">)</span>
+
+        <span class="c1"># The Tinker 2008 mass function</span>
+        <span class="n">nM</span> <span class="o">=</span> <span class="n">ccl</span><span class="o">.</span><span class="n">halos</span><span class="o">.</span><span class="n">MassFuncTinker08</span><span class="p">(</span><span class="n">mass_def</span><span class="o">=</span><span class="n">hmd_200m</span><span class="p">)</span>
+
+        <span class="c1"># The Tinker 2010 halo bias</span>
+        <span class="n">bM</span> <span class="o">=</span> <span class="n">ccl</span><span class="o">.</span><span class="n">halos</span><span class="o">.</span><span class="n">HaloBiasTinker10</span><span class="p">(</span><span class="n">mass_def</span><span class="o">=</span><span class="n">hmd_200m</span><span class="p">)</span>
+
+        <span class="c1"># The NFW profile to characterize the matter density around halos</span>
+        <span class="n">prof</span> <span class="o">=</span> <span class="n">ccl</span><span class="o">.</span><span class="n">halos</span><span class="o">.</span><span class="n">HaloProfileNFW</span><span class="p">(</span>
+            <span class="n">mass_def</span><span class="o">=</span><span class="n">hmd_200m</span><span class="p">,</span> <span class="n">concentration</span><span class="o">=</span><span class="n">cM</span><span class="p">,</span> <span class="n">fourier_analytic</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using NFW profile with mass definition:&quot;</span><span class="p">,</span> <span class="n">hmd_200m</span><span class="p">)</span>
+
+        <span class="n">hmc</span> <span class="o">=</span> <span class="n">ccl</span><span class="o">.</span><span class="n">halos</span><span class="o">.</span><span class="n">halo_model</span><span class="o">.</span><span class="n">HMCalculator</span><span class="p">(</span>
+            <span class="n">mass_function</span><span class="o">=</span><span class="n">nM</span><span class="p">,</span>  <span class="c1"># must be a keyword</span>
+            <span class="n">halo_bias</span><span class="o">=</span><span class="n">bM</span><span class="p">,</span>  <span class="c1"># must be a keyword</span>
+            <span class="n">mass_def</span><span class="o">=</span><span class="n">hmd_200m</span><span class="p">,</span>  <span class="c1"># optional (default is 200m anyway)</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;step 2 done&quot;</span><span class="p">)</span>
+
+        <span class="c1"># 4) build trispectrum splines ONCE</span>
+        <span class="n">Tk</span> <span class="o">=</span> <span class="n">halomod_Tk3D_cNG</span><span class="p">(</span>
+            <span class="n">cosmo</span><span class="o">=</span><span class="n">cosmo</span><span class="o">.</span><span class="n">cosmoccl</span><span class="p">,</span>
+            <span class="n">hmc</span><span class="o">=</span><span class="n">hmc</span><span class="p">,</span>
+            <span class="n">prof</span><span class="o">=</span><span class="n">prof</span><span class="p">,</span>
+            <span class="n">lk_arr</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">),</span>  <span class="c1"># interpolate in ln k exactly where you want</span>
+            <span class="n">a_arr</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span>
+                <span class="n">scale_factor</span>
+            <span class="p">),</span>  <span class="c1"># only one scale factor → 2D interpolation</span>
+            <span class="n">use_log</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># builds spline in log‐space for accuracy</span>
+            <span class="n">separable_growth</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;step 3 done&quot;</span><span class="p">)</span>
+        <span class="n">Tmat</span> <span class="o">=</span> <span class="n">Tk</span><span class="p">(</span><span class="n">cosmo</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;step 4 done&quot;</span><span class="p">)</span>
+        <span class="n">Cgauss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">Pnl</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">Nmodes</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">)])</span>
+        <span class="n">Cfull</span> <span class="o">=</span> <span class="n">Cgauss</span> <span class="o">+</span> <span class="n">Tmat</span> <span class="o">/</span> <span class="n">vol</span>
+        <span class="c1"># jitter = 1e-8 * np.diag(np.diag(Cfull))</span>
+        <span class="n">cov</span> <span class="o">=</span> <span class="n">Cfull</span>  <span class="c1"># + jitter</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">numberofrealisations</span>  <span class="c1"># number of realizations per redshift</span>
+        <span class="n">na</span><span class="p">,</span> <span class="n">nk</span> <span class="o">=</span> <span class="n">Pnl</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># container: shape (na, N, nk)</span>
+        <span class="n">pnl_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">na</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">nk</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">na</span><span class="p">):</span>
+            <span class="n">mean_i</span> <span class="o">=</span> <span class="n">Pnl</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>  <span class="c1"># length-nk mean vector at a_vals[i]</span>
+            <span class="n">cov_i</span> <span class="o">=</span> <span class="n">cov</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>  <span class="c1"># same covariance used for all, or recompute per-z if needed</span>
+            <span class="n">cov_i</span> <span class="o">=</span> <span class="n">cov_i</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nk</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-12</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">cov_i</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">nk</span><span class="p">)</span>
+            <span class="n">pnl_samples</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">mean_i</span><span class="p">,</span> <span class="n">cov_i</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">N</span><span class="p">)</span>
+        <span class="n">pk_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">z_</span><span class="p">:</span> <span class="n">Pnl</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">z_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">z</span><span class="p">)}</span>
+        <span class="n">pk_samples_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">z_</span><span class="p">:</span> <span class="n">pnl_samples</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">z_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">z</span><span class="p">)}</span>
+        <span class="n">cov_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">z_</span><span class="p">:</span> <span class="n">cov</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">z_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">z</span><span class="p">)}</span>
+        <span class="k">return</span> <span class="n">cov_dict</span><span class="p">,</span> <span class="n">pk_samples_dict</span><span class="p">,</span> <span class="n">pk_dict</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pk_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">z_</span><span class="p">:</span> <span class="n">Pnl</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">z_</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">z</span><span class="p">)}</span>
+        <span class="k">return</span> <span class="n">pk_dict</span></div>
+
+
+
+<span class="c1"># def get_covariance(cosmo, z, Lbox=505.0, k_survey=None):</span>
+<span class="c1">#     # ---- 1) setup ----</span>
+<span class="c1">#     ks = cosmo.k</span>
+<span class="c1">#     nk = len(ks)</span>
+<span class="c1">#     vol = Lbox**3</span>
+<span class="c1">#     a   = 1.0/(1.0+z)</span>
+
+<span class="c1">#     # Gaussian diagonal</span>
+<span class="c1">#     dk     = cosmo.dk</span>
+<span class="c1">#     # exact mode count if you prefer:</span>
+<span class="c1">#     Nmodes = vol/(2*np.pi**2)/3 * ((ks+dk/2)**3 - (ks-dk/2)**3)</span>
+<span class="c1">#     Pnl    = ccl.nonlin_matter_power(cosmo.cosmoccl, ks, a)</span>
+<span class="c1">#     Cgauss = np.diag(2.0 * Pnl**2 / Nmodes)</span>
+
+<span class="c1">#     # ---- 2) tree‐level trispectrum pieces ----</span>
+<span class="c1">#     # 2.1) 1-halo:</span>
+<span class="c1">#     Tk1 = halomod_Tk3D_1h(cosmo = cosmo.cosmoccl, hmc   = hmc, prof  = prof, use_log = True, separable_growth = False)</span>
+<span class="c1">#     T1 = Tk1(ks, a)   # shape (nk,nk)</span>
+
+<span class="c1">#     # 2.2) 3-halo:</span>
+<span class="c1">#     Tk3 = halomod_Tk3D_3h(cosmo = cosmo.cosmoccl, hmc   = hmc, prof  = prof, use_log = True, separable_growth = False)</span>
+<span class="c1">#     T3 = Tk3(ks, a)</span>
+
+<span class="c1">#     # 2.3) 4-halo (tree‐level):</span>
+<span class="c1">#     Tk4 = Tk3D_pt(</span>
+<span class="c1">#         cosmo = cosmo.cosmoccl,</span>
+<span class="c1">#         lk_arr = None,    # let CCL pick its internal grid</span>
+<span class="c1">#         a_arr  = None</span>
+<span class="c1">#     )</span>
+<span class="c1">#     T4 = Tk4(ks, a)</span>
+
+<span class="c1">#     # assemble tree‐level covariance (skipping the two slow 2‐halo terms)</span>
+<span class="c1">#     C_tree = (T1 + T3 + T4) / vol</span>
+
+<span class="c1">#     # ---- 3) super‐sample covariance (SSC) via Eq. (D.3–D.5) ----</span>
+<span class="c1">#     # 3.1) response ∂P/∂δb from Eq. (D.3)</span>
+<span class="c1">#     #    here I use the “separate‐universe” trick in CCL:</span>
+<span class="c1">#     dP_deltab = ccl.covariances.pk_s_sigma(cosmo.cosmoccl, ks, a)</span>
+<span class="c1">#     # 3.2) σ²_b from Eq. (D.4) for a square mask of area A_survey</span>
+<span class="c1">#     if k_survey is None:</span>
+<span class="c1">#         raise ValueError(&quot;Please pass the survey side length in Mpc/h via k_survey&quot;)</span>
+<span class="c1">#     A_survey = k_survey**2</span>
+<span class="c1">#     def Mtil(lx,ly):</span>
+<span class="c1">#         # Eq. D.5: sinc mask Fourier transform for a square</span>
+<span class="c1">#         L = np.sqrt(A_survey)</span>
+<span class="c1">#         return np.sinc(lx*L/2/np.pi) * np.sinc(ly*L/2/np.pi)</span>
+
+<span class="c1">#     def integrand(l):</span>
+<span class="c1">#         # integrate over |ℓ|</span>
+<span class="c1">#         return l * special.j0(0)  # dummy: replace with actual ∫dφ |M̃|² P(l/χ)</span>
+<span class="c1">#     # for brevity, you can approximate σ²_b analytically for a square:</span>
+<span class="c1">#     chi = ccl.comoving_radial_distance(cosmo.cosmoccl, a)</span>
+<span class="c1">#     sigma_b2 = (1/A_survey) * np.trapz(</span>
+<span class="c1">#         Mtil(chi*ks, chi*ks)**2 * ccl.linear_matter_power(cosmo.cosmoccl, ks/chi, a),</span>
+<span class="c1">#         ks</span>
+<span class="c1">#     )</span>
+
+<span class="c1">#     Css = np.outer(dP_deltab, dP_deltab) * sigma_b2 / vol</span>
+
+<span class="c1">#     # ---- 4) final sum ----</span>
+<span class="c1">#     C_full = Cgauss + C_tree + Css</span>
+
+<span class="c1">#     return ks, C_full</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

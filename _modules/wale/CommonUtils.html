@@ -1,0 +1,297 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.CommonUtils &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">WALE — Wavelet ℓ₁-norm Estimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../wale.html">wale package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wale.CommonUtils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wale.CommonUtils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.integrate</span><span class="w"> </span><span class="kn">import</span> <span class="n">simpson</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">astropy</span><span class="w"> </span><span class="kn">import</span> <span class="n">units</span> <span class="k">as</span> <span class="n">u</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.FilterFunctions</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+
+
+<div class="viewcode-block" id="apply_pixel_window">
+<a class="viewcode-back" href="../../wale.CommonUtils.html#wale.CommonUtils.apply_pixel_window">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_pixel_window</span><span class="p">(</span><span class="n">ells</span><span class="p">,</span> <span class="n">theta_deg</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">npix</span><span class="o">=</span><span class="mi">1200</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the pixel window function for a square map and apply it to multipoles.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ells : array_like</span>
+<span class="sd">        Multipole values (ℓ) at which the window function is evaluated.</span>
+<span class="sd">    theta_deg : float, optional</span>
+<span class="sd">        Total angular size of the map in degrees (default is 10.0).</span>
+<span class="sd">    npix : int, optional</span>
+<span class="sd">        Number of pixels per side of the square map (default is 1200).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    W_ell : ndarray</span>
+<span class="sd">        The pixel window function evaluated at each ℓ.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">theta_pix_rad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">theta_deg</span> <span class="o">/</span> <span class="n">npix</span><span class="p">)</span>
+    <span class="n">arg</span> <span class="o">=</span> <span class="n">ells</span> <span class="o">*</span> <span class="n">theta_pix_rad</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">W_ell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sinc</span><span class="p">(</span><span class="n">arg</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="k">return</span> <span class="n">W_ell</span></div>
+
+
+
+<div class="viewcode-block" id="fourier_coordinate">
+<a class="viewcode-back" href="../../wale.CommonUtils.html#wale.CommonUtils.fourier_coordinate">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fourier_coordinate</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">map_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the 1D Fourier coordinate index corresponding to 2D (x, y) on a square map.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : int</span>
+<span class="sd">        X-coordinate (horizontal index).</span>
+<span class="sd">    y : int</span>
+<span class="sd">        Y-coordinate (vertical index).</span>
+<span class="sd">    map_size : int</span>
+<span class="sd">        Size of one side of the square map.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    idx : int</span>
+<span class="sd">        Flattened Fourier-space index.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(((</span><span class="n">map_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">y</span></div>
+
+
+
+<div class="viewcode-block" id="get_moments">
+<a class="viewcode-back" href="../../wale.CommonUtils.html#wale.CommonUtils.get_moments">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_moments</span><span class="p">(</span><span class="n">kappa_values</span><span class="p">,</span> <span class="n">pdf_values</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the first four moments of a given 1D probability distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    kappa_values : ndarray</span>
+<span class="sd">        Bin centers or sample points along the kappa (x-axis).</span>
+<span class="sd">    pdf_values : ndarray</span>
+<span class="sd">        Corresponding PDF values at each kappa.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mean_kappa : float</span>
+<span class="sd">        Mean of the distribution.</span>
+<span class="sd">    variance : float</span>
+<span class="sd">        Variance of the distribution.</span>
+<span class="sd">    S_3 : float</span>
+<span class="sd">        Skewness (third standardized moment).</span>
+<span class="sd">    K : float</span>
+<span class="sd">        Kurtosis minus 3 (excess kurtosis).</span>
+<span class="sd">    norm : float</span>
+<span class="sd">        Normalization constant of the input PDF.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">pdf_values</span><span class="p">,</span> <span class="n">kappa_values</span><span class="p">)</span>
+    <span class="n">normalized_pdf_values</span> <span class="o">=</span> <span class="n">pdf_values</span> <span class="o">/</span> <span class="n">norm</span>
+    <span class="n">mean_kappa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">kappa_values</span> <span class="o">*</span> <span class="n">normalized_pdf_values</span><span class="p">,</span> <span class="n">kappa_values</span><span class="p">)</span>
+    <span class="n">variance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">kappa_values</span> <span class="o">-</span> <span class="n">mean_kappa</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">normalized_pdf_values</span><span class="p">,</span> <span class="n">kappa_values</span>
+    <span class="p">)</span>
+    <span class="n">third_moment</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">kappa_values</span> <span class="o">-</span> <span class="n">mean_kappa</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">normalized_pdf_values</span><span class="p">,</span> <span class="n">kappa_values</span>
+    <span class="p">)</span>
+    <span class="n">fourth_moment</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">kappa_values</span> <span class="o">-</span> <span class="n">mean_kappa</span><span class="p">)</span> <span class="o">**</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">normalized_pdf_values</span><span class="p">,</span> <span class="n">kappa_values</span>
+    <span class="p">)</span>
+    <span class="n">S_3</span> <span class="o">=</span> <span class="n">third_moment</span> <span class="o">/</span> <span class="p">(</span><span class="n">variance</span><span class="o">**</span><span class="mf">2.0</span><span class="p">)</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">fourth_moment</span> <span class="o">/</span> <span class="n">variance</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">3</span>
+    <span class="k">return</span> <span class="n">mean_kappa</span><span class="p">,</span> <span class="n">variance</span><span class="p">,</span> <span class="n">S_3</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">norm</span></div>
+
+
+
+<div class="viewcode-block" id="get_l1_from_pdf">
+<a class="viewcode-back" href="../../wale.CommonUtils.html#wale.CommonUtils.get_l1_from_pdf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_l1_from_pdf</span><span class="p">(</span><span class="n">counts</span><span class="p">,</span> <span class="n">bins</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the L1 norm (∫|x|P(x)dx) from a histogram representation of a PDF.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    counts : ndarray</span>
+<span class="sd">        Histogram bin counts or PDF values (P(x)).</span>
+<span class="sd">    bins : ndarray</span>
+<span class="sd">        Bin centers or values corresponding to the counts.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    l1_norm : ndarray</span>
+<span class="sd">        L1 norm approximation (P(x) * |x| per bin).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">counts</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">bins</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="compute_sigma_kappa_squared">
+<a class="viewcode-back" href="../../wale.CommonUtils.html#wale.CommonUtils.compute_sigma_kappa_squared">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_sigma_kappa_squared</span><span class="p">(</span>
+    <span class="n">theta_arcmin</span><span class="p">,</span> <span class="n">chis</span><span class="p">,</span> <span class="n">lensingweights</span><span class="p">,</span> <span class="n">redshifts</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">pnl</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">,</span> <span class="n">h</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the smoothed convergence variance σ²_κ(θ) at a given angular scale using a filter.</span>
+
+<span class="sd">    This function computes the convergence power spectrum P_κ(ℓ) from a 3D P(k, z)</span>
+<span class="sd">    and integrates over ℓ using a top-hat or starlet filter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    theta_arcmin : float</span>
+<span class="sd">        Angular smoothing scale θ in arcminutes.</span>
+<span class="sd">    chis : ndarray</span>
+<span class="sd">        Comoving distances χ (in Mpc) corresponding to redshifts.</span>
+<span class="sd">    lensingweights : ndarray</span>
+<span class="sd">        Lensing kernel W(χ) evaluated at each χ.</span>
+<span class="sd">    redshifts : ndarray</span>
+<span class="sd">        Redshifts corresponding to chis.</span>
+<span class="sd">    k : ndarray</span>
+<span class="sd">        Wavenumber grid (in h/Mpc).</span>
+<span class="sd">    pnl : 2D ndarray</span>
+<span class="sd">        Nonlinear power spectrum P(k, z), shape (n_z, len(k)).</span>
+<span class="sd">    filter_type : str</span>
+<span class="sd">        Type of filter to apply (&quot;tophat&quot; or &quot;starlet&quot;).</span>
+<span class="sd">    h : float</span>
+<span class="sd">        Reduced Hubble constant (H0 / 100).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sigma2 : float</span>
+<span class="sd">        Smoothed convergence variance σ²_κ(θ).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">theta_rad</span> <span class="o">=</span> <span class="p">(</span><span class="n">theta_arcmin</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">arcmin</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">rad</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">ell</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+    <span class="n">P_kappa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">ell</span><span class="p">)</span>
+    <span class="n">pnl_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">pnl</span><span class="p">[</span><span class="n">z_</span><span class="p">]</span> <span class="k">for</span> <span class="n">z_</span> <span class="ow">in</span> <span class="n">redshifts</span><span class="p">])</span>  <span class="c1"># shape: (n_chi, nk)</span>
+
+    <span class="c1"># plt.loglog(k, pnl_array.T)</span>
+    <span class="c1"># plt.show()</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ell</span><span class="p">):</span>
+
+        <span class="n">chis_h_inv</span> <span class="o">=</span> <span class="n">chis</span> <span class="o">*</span> <span class="n">h</span>  <span class="c1"># now in h⁻¹ Mpc</span>
+        <span class="n">k_l</span> <span class="o">=</span> <span class="n">l</span> <span class="o">/</span> <span class="n">chis_h_inv</span>
+        <span class="c1"># Interpolate P(k) at each redshift slice</span>
+        <span class="n">pk_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">k_l</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">k</span><span class="p">,</span> <span class="n">pnl_array</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">left</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chis</span><span class="p">))</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">integrand</span> <span class="o">=</span> <span class="p">(</span><span class="n">lensingweights</span> <span class="o">/</span> <span class="n">chis</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">pk_vals</span>
+        <span class="n">P_kappa</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">simpson</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">chis</span><span class="p">)</span>
+
+    <span class="c1"># Apply top-hat filter window in Fourier space</span>
+    <span class="k">if</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;tophat&quot;</span><span class="p">:</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">top_hat_filter</span><span class="p">(</span><span class="n">ell</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">theta_rad</span><span class="p">)</span> <span class="o">-</span> <span class="n">top_hat_filter</span><span class="p">(</span><span class="n">ell</span><span class="p">,</span> <span class="n">theta_rad</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;starlet&quot;</span><span class="p">:</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">starlet_filter</span><span class="p">(</span><span class="n">ell</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">theta_rad</span><span class="p">)</span> <span class="o">-</span> <span class="n">starlet_filter</span><span class="p">(</span><span class="n">ell</span><span class="p">,</span> <span class="n">theta_rad</span><span class="p">)</span>
+
+    <span class="n">pixel_window</span> <span class="o">=</span> <span class="n">apply_pixel_window</span><span class="p">(</span><span class="n">ell</span><span class="p">,</span> <span class="n">theta_deg</span><span class="o">=</span><span class="n">theta_rad</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">rad</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">deg</span><span class="p">))</span>
+    <span class="n">integrand</span> <span class="o">=</span> <span class="n">ell</span> <span class="o">*</span> <span class="n">P_kappa</span> <span class="o">*</span> <span class="p">(</span><span class="n">W</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma2</span> <span class="o">=</span> <span class="n">simpson</span><span class="p">(</span><span class="n">integrand</span><span class="p">,</span> <span class="n">ell</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sigma2</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wale.RateFunction module &mdash; Wavelet l1-norm prediction from one-point PDF 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="wale.VarianceCalculator module" href="wale.VarianceCalculator.html" />
+    <link rel="prev" title="wale.LoadSimulations module" href="wale.LoadSimulations.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wavelet l1-norm prediction from one-point PDF
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">WALE — Wavelet ℓ₁-norm Estimator</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="wale.html">wale package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="wale.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="wale.CommonUtils.html">wale.CommonUtils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.ComputePDF.html">wale.ComputePDF module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CosmologyModel.html">wale.CosmologyModel module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CovarianceMatrix.html">wale.CovarianceMatrix module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.CriticalPoints.html">wale.CriticalPoints module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.FilterFunctions.html">wale.FilterFunctions module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.InitializeVariables.html">wale.InitializeVariables module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wale.LoadSimulations.html">wale.LoadSimulations module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">wale.RateFunction module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_phi_projec_2cell"><code class="docutils literal notranslate"><span class="pre">get_phi_projec_2cell()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_psi_2cell"><code class="docutils literal notranslate"><span class="pre">get_psi_2cell()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_psi_2nd_derivative_delta1"><code class="docutils literal notranslate"><span class="pre">get_psi_2nd_derivative_delta1()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_psi_2nd_derivative_delta2"><code class="docutils literal notranslate"><span class="pre">get_psi_2nd_derivative_delta2()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_psi_derivative_delta1"><code class="docutils literal notranslate"><span class="pre">get_psi_derivative_delta1()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_psi_derivative_delta2"><code class="docutils literal notranslate"><span class="pre">get_psi_derivative_delta2()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_psi_mixed_derivative_delta1_delta2"><code class="docutils literal notranslate"><span class="pre">get_psi_mixed_derivative_delta1_delta2()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_scaled_cgf"><code class="docutils literal notranslate"><span class="pre">get_scaled_cgf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.get_tau"><code class="docutils literal notranslate"><span class="pre">get_tau()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wale.RateFunction.psi_derivative_determinant"><code class="docutils literal notranslate"><span class="pre">psi_derivative_determinant()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="wale.VarianceCalculator.html">wale.VarianceCalculator module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wavelet l1-norm prediction from one-point PDF</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="wale.html">wale package</a></li>
+      <li class="breadcrumb-item active">wale.RateFunction module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/wale.RateFunction.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-wale.RateFunction">
+<span id="wale-ratefunction-module"></span><h1>wale.RateFunction module<a class="headerlink" href="#module-wale.RateFunction" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_phi_projec_2cell">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_phi_projec_2cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zarr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dchis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_phi_projec_2cell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_phi_projec_2cell" title="Link to this definition"></a></dt>
+<dd><p>Compute projected 2-cell φ(y) by solving saddle-point equations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta1</strong> (<em>float</em>) – Angular scales of the two cells.</p></li>
+<li><p><strong>theta2</strong> (<em>float</em>) – Angular scales of the two cells.</p></li>
+<li><p><strong>zarr</strong> (<em>ndarray</em>) – Redshifts at which to evaluate.</p></li>
+<li><p><strong>chis</strong> (<em>ndarray</em>) – Comoving distances corresponding to redshifts.</p></li>
+<li><p><strong>dchis</strong> (<em>float</em>) – Integration step size in χ.</p></li>
+<li><p><strong>w</strong> (<em>ndarray</em>) – Lensing weight function W(χ).</p></li>
+<li><p><strong>y</strong> (<em>ndarray</em>) – Slope values for SCGF (y-grid).</p></li>
+<li><p><strong>recal</strong> (<em>float</em>) – Empirical recalibration factor.</p></li>
+<li><p><strong>variance</strong> (<em>object</em>) – Provides nonlinear_sigma2(χ) interface.</p></li>
+<li><p><strong>deld</strong> (<em>float</em><em>, </em><em>optional</em>) – Step size for finite differences (default: 1e-8).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>phi_proj</strong> – Projected φ(y) values computed via saddle-point approximation.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_psi_2cell">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_psi_2cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_psi_2cell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_psi_2cell" title="Link to this definition"></a></dt>
+<dd><p>Compute the 2-cell action ψ(δ₁, δ₂) using large-deviation theory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variance</strong> (<em>object</em>) – Object providing nonlinear_sigma2 method for computing variances.</p></li>
+<li><p><strong>chi</strong> (<em>float</em><em> or </em><em>ndarray</em>) – Comoving distance(s).</p></li>
+<li><p><strong>recal</strong> (<em>float</em>) – Empirical recalibration factor.</p></li>
+<li><p><strong>z</strong> (<em>float</em>) – Redshift.</p></li>
+<li><p><strong>delta1</strong> (<em>float</em>) – Density contrasts in each cell.</p></li>
+<li><p><strong>delta2</strong> (<em>float</em>) – Density contrasts in each cell.</p></li>
+<li><p><strong>theta1</strong> (<em>float</em>) – Angular scales of the two cells.</p></li>
+<li><p><strong>theta2</strong> (<em>float</em>) – Angular scales of the two cells.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>psi</strong> – Value of the large-deviation action ψ(δ₁, δ₂).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_psi_2nd_derivative_delta1">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_psi_2nd_derivative_delta1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deld</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_psi_2nd_derivative_delta1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_psi_2nd_derivative_delta1" title="Link to this definition"></a></dt>
+<dd><p>Compute ∂²ψ/∂δ₁² using second-order central finite differences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>second_derivative</strong> – Second partial derivative of ψ with respect to δ₁.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_psi_2nd_derivative_delta2">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_psi_2nd_derivative_delta2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deld</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_psi_2nd_derivative_delta2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_psi_2nd_derivative_delta2" title="Link to this definition"></a></dt>
+<dd><p>Compute ∂²ψ/∂δ₂² using second-order central finite differences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>second_derivative</strong> – Second partial derivative of ψ with respect to δ₂.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_psi_derivative_delta1">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_psi_derivative_delta1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deld</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_psi_derivative_delta1"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_psi_derivative_delta1" title="Link to this definition"></a></dt>
+<dd><p>Compute ∂ψ/∂δ₁ using central finite differences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>derivative</strong> – Numerical partial derivative of ψ with respect to δ₁.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_psi_derivative_delta2">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_psi_derivative_delta2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deld</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_psi_derivative_delta2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_psi_derivative_delta2" title="Link to this definition"></a></dt>
+<dd><p>Compute ∂ψ/∂δ₂ using central finite differences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>derivative</strong> – Numerical partial derivative of ψ with respect to δ₂.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_psi_mixed_derivative_delta1_delta2">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_psi_mixed_derivative_delta1_delta2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deld</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_psi_mixed_derivative_delta1_delta2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_psi_mixed_derivative_delta1_delta2" title="Link to this definition"></a></dt>
+<dd><p>Compute the mixed partial derivative ∂²ψ/∂δ₁∂δ₂ using central differences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mixed_derivative</strong> – Mixed second-order partial derivative of ψ.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_scaled_cgf">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_scaled_cgf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zarr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dchis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lensing_weight</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_scaled_cgf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_scaled_cgf" title="Link to this definition"></a></dt>
+<dd><p>Wrapper to compute the scaled cumulant generating function (SCGF).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta1</strong> (<em>float</em>) – Angular scales.</p></li>
+<li><p><strong>theta2</strong> (<em>float</em>) – Angular scales.</p></li>
+<li><p><strong>zarr</strong> (<em>ndarray</em>) – Redshift values.</p></li>
+<li><p><strong>chis</strong> (<em>ndarray</em>) – Comoving distances.</p></li>
+<li><p><strong>dchis</strong> (<em>float</em>) – Integration step size.</p></li>
+<li><p><strong>lensing_weight</strong> (<em>ndarray</em>) – Lensing kernel W(χ).</p></li>
+<li><p><strong>y</strong> (<em>ndarray</em>) – SCGF slope values.</p></li>
+<li><p><strong>recal</strong> (<em>float</em>) – Recalibration factor.</p></li>
+<li><p><strong>variance</strong> (<em>object</em>) – Provides nonlinear sigma²(R₁, R₂, z).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>scgf</strong> – The scaled cumulant generating function φ(y).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.get_tau">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">get_tau</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#get_tau"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.get_tau" title="Link to this definition"></a></dt>
+<dd><p>Compute the large-deviation theory mapping τ(ρ) for a given density contrast ρ.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>rho</strong> (<em>float</em><em> or </em><em>array_like</em>) – Local density ρ = 1 + δ.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>tau</strong> – The corresponding τ(ρ) value based on the ν parameter.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="wale.RateFunction.psi_derivative_determinant">
+<span class="sig-prename descclassname"><span class="pre">wale.RateFunction.</span></span><span class="sig-name descname"><span class="pre">psi_derivative_determinant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deld</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wale/RateFunction.html#psi_derivative_determinant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wale.RateFunction.psi_derivative_determinant" title="Link to this definition"></a></dt>
+<dd><p>Compute the determinant of the Hessian matrix of ψ(δ₁, δ₂):</p>
+<blockquote>
+<div><p>det(H) = ∂²ψ/∂δ₁² * ∂²ψ/∂δ₂² − (∂²ψ/∂δ₁∂δ₂)²</p>
+</div></blockquote>
+<p>This determinant is used for computing the normalization in saddle-point approximations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>result</strong> – Determinant of the ψ Hessian matrix.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="wale.LoadSimulations.html" class="btn btn-neutral float-left" title="wale.LoadSimulations module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wale.VarianceCalculator.html" class="btn btn-neutral float-right" title="wale.VarianceCalculator module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Vilasini Tinnaneri Sreekanth.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
