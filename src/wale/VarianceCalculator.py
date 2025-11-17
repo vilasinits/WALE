@@ -53,7 +53,7 @@ class Variance:
         pk = kwargs["pk"] if "pk" in kwargs else self.pk[redshift]
 
         # pk = self.pk[redshift]
-        k = self.cosmo.k #* self.cosmo.h                                     #################### removed h         
+        k = self.cosmo.k      
         if self.filter_type == "tophat":
             w1_2D = top_hat_filter(self.cosmo.k, R1)
             w2_2D = top_hat_filter(self.cosmo.k, R2)
@@ -66,7 +66,7 @@ class Variance:
             w2 = w1_2D * w2_2D
         constant = 1.0 / 2.0 / np.pi
         integrand = k * pk * w2 * constant
-        return simpson(integrand, x=k) #/self.cosmo.h  #/ (self.cosmo.h**2.)                   #################### removed h
+        return simpson(integrand, x=k) 
 
     def get_sig_slice(self, z, R1, R2):
         """
@@ -80,7 +80,6 @@ class Variance:
         Returns:
             float: The slice variance σ² at the given scales and redshift.
         """
-        # print("bvcgfhdjfmhbnv cxzZsxdfnhgjkn,")
         if self.filter_type == "tophat":
             sigslice = (
                 self.nonlinear_sigma2(z, R1)

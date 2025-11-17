@@ -50,7 +50,7 @@ class computePDF:
         if kappa is not None:
             self.kappa = kappa
         else:
-            edges = np.linspace(-0.06, 0.06, 201)
+            edges = np.linspace(-0.06, 0.02, 801)
             self.kappa = 0.5 * (edges[:-1] + edges[1:])
         self.pdf_values, self.kappa_values = self.compute_pdf_values()
 

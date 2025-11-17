@@ -74,7 +74,7 @@ class InitialiseVariables:
         if self.zsource is not None:
             self.chisource = self.cosmo.get_chi(self.zsource)
         else:
-            nz = np.load(self.nz_file)
+            nz = np.loadtxt(self.nz_file)
             self.z_nz = nz[:, 0]
             self.n_z = nz[:, 1]
             self.chisource = self.cosmo.get_chi(self.z_nz[-1])

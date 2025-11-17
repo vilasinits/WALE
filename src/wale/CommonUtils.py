@@ -171,7 +171,7 @@ def compute_sigma_kappa_squared_(
         W = starlet_filter(ell, 2.0 * theta_rad) - starlet_filter(ell, theta_rad)
 
     pixel_window = apply_pixel_window(ell, theta_deg=theta_rad * u.rad.to(u.deg))
-    integrand = ell * P_kappa * (W**2) 
+    integrand = ell * P_kappa #* (W**2) 
     sigma2 = simpson(integrand, ell) / (2.0 * np.pi)
 
     return sigma2
@@ -223,7 +223,7 @@ def compute_sigma_kappa_squared(
     theta_rad = (theta_arcmin * u.arcmin).to(u.rad).value
 
     # ℓ grid focused where the filter has support
-    ell_min = 50.0
+    ell_min = 2.0
     ell_max = 2e4 #min(5e6, 200.0 / max(theta_rad, 1e-6))
     print(f"  Computing σ²_κ at θ={theta_arcmin:.2f} arcmin using ℓ in [{ell_min:.1f}, {ell_max:.1f}]")
     ell = np.logspace(np.log10(ell_min), np.log10(ell_max), 500)
@@ -261,7 +261,7 @@ def compute_sigma_kappa_squared(
 
     # Apply pixel window if you have pixelization
     pixel_window = apply_pixel_window(ell, theta_deg=theta_rad * u.rad.to(u.deg))
-    Wtot = Wl * pixel_window
+    Wtot = Wl #* pixel_window
 
     # σ^2_κ(θ) = ∫ dℓ ℓ/(2π) P_κ(ℓ) |W(ℓθ)|^2
     sigma2 = simpson(ell * P_kappa * (Wtot ** 2), x=ell) / (2.0 * np.pi)
