@@ -5,8 +5,11 @@ import pyccl as ccl
 from scipy.interpolate import interp1d
 from scipy.integrate import trapezoid
 
-from pyccl.halos.pk_4pt import halomod_Tk3D_4h
-
+# from pyccl.halos.pk_4pt import halomod_Tk3D_4h
+# import importlib.resources as importlib_res
+# import importlib_resources
+# setattr(importlib_res, "files", importlib_resources.files)
+# setattr(importlib_res, "as_file", importlib_resources.as_file)
 
 class Cosmology_function:
     """
@@ -53,7 +56,7 @@ class Cosmology_function:
         self.Ob = Ob
         self.w = w
         self.wa = wa
-        self.H0 = 100.0 * h  # Hubble constant in km/s/Mpc
+        self.H0 = 100.0 * h  
         self.Om = Oc + Ob
         self.ns = kwargs.get("ns", 0.973)  # scalar spectral index
 
@@ -94,9 +97,9 @@ class Cosmology_function:
                     wa=self.wa,
                     transfer_function="boltzmann_camb",
                 )
+           
 
         self.cosmoccl = _set_params(self)
-
     def _E(self, z):
         """
         Compute the dimensionless Hubble expansion rate E(z) = H(z)/H0.
@@ -176,7 +179,7 @@ class Cosmology_function:
         - Assumes a flat universe with constant c = 299792.458 km/s.
         - The integration is done individually for each redshift if an array is given.
         """
-        H0 = self.H0  # km/s/Mpc
+        H0 = self.H0    # km/s/Mpc                                                                                 
         c = self.speed_light  # speed of light in km/s
 
         def integrand(zp):
@@ -233,7 +236,7 @@ class Cosmology_function:
         chi_arr = np.asanyarray(chi_target)
         z_arr = np.empty_like(chi_arr, dtype=float)
         for i, chi_t in enumerate(chi_arr):
-            z_arr[i] = find_root(chi_t)
+            z_arr[i] = find_root(chi_t).root
         return z_arr
 
     def get_nonlinear_pk(self, z, ks=None):
@@ -245,57 +248,40 @@ class Cosmology_function:
         z : float
             Redshift at which to evaluate the power spectrum.
         ks : array_like, optional
-            Wavenumber values in h/Mpc. If None, uses the default self.k array.
+            Wavenumber values in 1/Mpc. If None, uses the default self.k array.
 
         Returns
         -------
         Pnl : ndarray
-            Non-linear matter power spectrum at redshift z for the given ks, in (Mpc/h)^3.
+            Non-linear matter power spectrum at redshift z for the given ks, in (Mpc)^3.
         """
         # default k-grid
         if ks is None:
-            ks = self.k  # np.logspace(np.log10(self.kmin),
-            #  np.log10(self.kmax),
-            #  self.nk)
+            ks = self.k  
         else:
             ks = np.atleast_1d(ks)
         a = 1.0 / (1.0 + z)
         # compute HALOFIT non-linear power
-        Pnl = ccl.nonlin_matter_power(self.cosmoccl, self.k, a)
+        Pnl = ccl.nonlin_matter_power(self.cosmoccl, ks, a)
         return Pnl
-
+    
     def get_lensing_weight_array(self, chis, chi_source):
         """
         Compute lensing weight array W(chi) for a single source plane at chi_source.
-
-        Parameters
-        ----------
-        chis : array_like
-            Comoving radial distances (chi) at which to compute lensing weights.
-        chi_source : float
-            Comoving distance to the source plane (single redshift).
-
-        Returns
-        -------
-        z_values : ndarray
-            Redshift values corresponding to chis, computed via inversion.
-        lensing_weight : ndarray
-            Lensing weight W(chi) evaluated at each input chi.
+        Returns (z_values, lensing_weight).
         """
-        z_values = self.get_z_from_chi(chis)
-        lensing_weight = np.zeros_like(chis)
-        for i in range(len(chis)):
-            z = z_values[i]
-            lensing_weight[i] = (
-                1.5
-                * self.Om
-                * (self.speed_light**-2.0)
-                * ((self.H0) ** 2.0)
-                * chis[i]
-                * (1 - (chis[i] / chi_source))
-                * (1 + z)
-            )
+        chis = np.asarray(chis, dtype=float)
+        z_values_raw = self.get_z_from_chi(chis)
+        z_values = np.asarray([getattr(z, "root", z) for z in np.atleast_1d(z_values_raw)],
+                            dtype=float)
+
+        prefac = 1.5 * self.Om * (self.H0**2) / (self.speed_light**2)
+        lensing_weight = prefac * chis * (1.0 - chis / float(chi_source)) * (1.0 + z_values)
+
+        # Physical kernel is zero for lenses beyond the source
+        lensing_weight[chis >= chi_source] = 0.0
         return z_values, lensing_weight
+
 
     def get_lensing_weight_array_nz(self, chis, z_nz, n_z):
         """
@@ -319,7 +305,7 @@ class Cosmology_function:
             Lensing weight values W(chi) computed using the n(z) distribution.
         """
 
-        n_norm = n_z / trapezoid(n_z, z_nz)  # normalized n(z)
+        n_norm = n_z  / trapezoid(n_z, z_nz)  # normalized n(z)
 
         # Get chi(z) using self.get_chi
         chi_nz = self.get_chi(z_nz)  # in Mpc
@@ -345,37 +331,10 @@ class Cosmology_function:
             integral = trapezoid(integrand, chi_prime)
 
             lensing_weight[i] = (
-                (1.5 * self.Om * (self.H0) ** 2 / self.speed_light**2)
+                (1.5 * self.Om * ((self.H0) ** 2.) / self.speed_light**2.)
                 * chi
-                * (1 + z_values[i])
+                * (1. + z_values[i])
                 * integral
             )
 
         return z_values, lensing_weight
-
-    def get_lensing_weight(self, chis, chisource, **kwargs):
-        """
-        Dispatch method to compute lensing weights depending on source distribution.
-
-        Parameters
-        ----------
-        chis : array_like
-            Comoving radial distances where lensing weights are evaluated.
-        chisource : float
-            Source-plane comoving distance (used only if no n(z) is provided).
-        **kwargs :
-            Optional arguments:
-            - nz_file : str, optional
-                If provided, uses redshift distribution from file (not yet implemented).
-
-        Returns
-        -------
-        z_values : ndarray
-            Redshifts corresponding to chis.
-        lensing_weight : ndarray
-            Lensing weights W(chi) using either a single plane or n(z).
-        """
-        if kwargs.get("nz_file") is not None:
-            return self.get_lensing_weight_array_nz(chis)
-        else:
-            return self.get_lensing_weight_array(chis, chisource)

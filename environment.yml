@@ -25,5 +25,11 @@ dependencies:
   - distinctipy
   - ipykernel
   - camb
+  - numba
+  - distinctipy
+  - classy
+  - fast-pt
+  - job-lib
+  - scikit-image
   - pip:
       - tqdm
