@@ -54,6 +54,12 @@ def parse_arguments():
     parser.add_argument("--noise-level", type=float, default=0.26, 
                         help="Noise level for both datavectors and fiducial (when --noisy is set)")
     
+    # Smoothing scale used when computing datavectors (must match preprocessing runs)
+    parser.add_argument("--theta", type=float, default=15.0,
+                        help="Smoothing scale (theta) used for the datavectors; must match preprocessing runs")
+    parser.add_argument("--thetas", type=str, default=None,
+                        help="Comma-separated list of thetas (e.g. '15.0,30.0'). If provided, overrides --theta and datavectors will be concatenations of each theta's features.")
+    
     # Fiducial configuration  
     parser.add_argument("--fiducial-dataset", type=str, choices=["halofit", "fiducial"],
                         default="fiducial",
@@ -369,30 +375,47 @@ def construct_paths(args):
     noise_suffix = f"_noisy_s{args.noise_level:.2f}" if args.noisy else ""
     l1_paths = []
     fiducial_paths = []
-    
+
+    # Determine list of thetas to use. If --thetas provided, parse it; otherwise use single --theta
+    if getattr(args, 'thetas', None):
+        theta_list = [float(t.strip()) for t in args.thetas.split(',') if t.strip()!='']
+        if len(theta_list) == 0:
+            theta_list = [args.theta]
+    else:
+        theta_list = [args.theta]
+
     for bin_idx in bin_indices:
         bin_spec = f"bin{bin_idx}"
-        
-        # Training data path
-        l1_filename = f"all_l1_norms_{args.training_dataset}_{args.simulation_type}_{bin_spec}{noise_suffix}.npy"
-        l1_path = os.path.join(training_base_dir, l1_filename)
-        l1_paths.append(l1_path)
-        
-        # Fiducial path
-        fiducial_filename = f"all_l1_norms_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}{noise_suffix}.npy"
-        fiducial_path = os.path.join(fiducial_base_dir, fiducial_filename)
-        fiducial_paths.append(fiducial_path)
-    
-    return params_path, l1_paths, fiducial_paths, bin_desc
+
+        # For each theta, create a filename and store the full path. We keep a list per bin so
+        # callers can load multiple theta-specific datavectors and concatenate them.
+        l1_theta_paths = []
+        fid_theta_paths = []
+        for theta in theta_list:
+            l1_filename = f"all_l1_norms_{args.training_dataset}_{args.simulation_type}_{bin_spec}_theta{theta:.1f}{noise_suffix}.npy"
+            l1_theta_paths.append(os.path.join(training_base_dir, l1_filename))
+
+            fiducial_filename = f"all_l1_norms_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}_theta{theta:.1f}{noise_suffix}.npy"
+            fid_theta_paths.append(os.path.join(fiducial_base_dir, fiducial_filename))
+
+        l1_paths.append(l1_theta_paths)
+        fiducial_paths.append(fid_theta_paths)
+
+    return params_path, l1_paths, fiducial_paths, bin_desc, theta_list
 
 def main():
     args = parse_arguments()
     
-    # Construct file paths
-    params_path, l1_paths, fiducial_paths, bin_spec = construct_paths(args)
+    # Construct file paths (l1_paths and fiducial_paths are lists of lists when multiple thetas are used)
+    params_path, l1_paths, fiducial_paths, bin_spec, theta_list = construct_paths(args)
+    # Create a compact theta descriptor for filenames (e.g. 'theta15.0_30.0')
+    theta_desc_str = "_".join([f"{t:.1f}" for t in theta_list])
+    theta_desc_pref = f"theta{theta_desc_str}"
+    # keep theta_list available on args for downstream code if needed
+    args.theta_list = theta_list
     print(f"Using parameters file: {params_path}")
-    print(f"Using training datavector files: {l1_paths}")
-    print(f"Using fiducial files: {fiducial_paths}")
+    print(f"Using training datavector files (per bin, per theta): {l1_paths}")
+    print(f"Using fiducial files (per bin, per theta): {fiducial_paths}")
     
     # GPU configuration
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -402,35 +425,55 @@ def main():
     params = np.load(params_path, allow_pickle=True)
     print(f"Loaded parameters, shape: {params.shape}")
 
-    # Load and process data from each bin
+    # Load and process data from each bin. l1_paths is a list of lists: one inner list per bin,
+    # containing one file path per theta. We'll load each theta-specific datavector, optionally
+    # apply the per-bin kappa bin_range to each theta, then concatenate the theta features.
     l1_full_bins = []
-    for l1_path in l1_paths:
-        if not os.path.exists(l1_path):
-            raise FileNotFoundError(f"Training data file not found: {l1_path}")
-        l1_full = np.load(l1_path, allow_pickle=True)
-        l1_full_bins.append(l1_full)
-        print(f"Loaded training data from {l1_path}, shape: {l1_full.shape}")
+    for bin_idx, paths_per_bin in enumerate(l1_paths):
+        loaded_arrays = []
+        for p in paths_per_bin:
+            if not os.path.exists(p):
+                raise FileNotFoundError(f"Training data file not found: {p}")
+            arr = np.load(p, allow_pickle=True)
+            loaded_arrays.append(arr)
+            print(f"Loaded training data from {p}, shape: {arr.shape}")
+
+        # Ensure consistent number of simulations across thetas
+        n_sims = loaded_arrays[0].shape[0]
+        for arr in loaded_arrays:
+            if arr.shape[0] != n_sims:
+                raise ValueError("Inconsistent number of simulations across theta files for the same bin")
+
+        # Determine number of redshift bins for bin range parsing (computed from number of bins)
+        # Note: bin_ranges refer to kappa-bin indices per theta; we therefore apply the slice to each theta
+        # before concatenation so the resulting features correspond to the requested kappa range for each theta.
+        l1_full_bins.append(loaded_arrays)
 
     # Determine number of redshift bins for bin range parsing
     num_redshift_bins = len(l1_full_bins)
-    
+
     # Parse bin ranges
     bin_ranges = parse_bin_ranges(args, num_redshift_bins)
 
-    # Process each bin's data
+    # For each bin, optionally slice each theta's kappa range then concatenate theta-wise features
     bin_data_list = []
-    for i, l1_full in enumerate(l1_full_bins):
-        # l1_full should have shape (n_sims, n_kappa_bins)
-        bin_data = l1_full
-        
-        # Apply bin range if specified
+    for i, arrays_per_bin in enumerate(l1_full_bins):
+        processed_theta_arrays = []
+        for arr in arrays_per_bin:
+            if bin_ranges:
+                start_bin, end_bin = bin_ranges[i]
+                arr_proc = arr[:, start_bin:end_bin+1]
+            else:
+                arr_proc = arr
+            processed_theta_arrays.append(arr_proc)
+
+        # Concatenate theta-specific feature blocks for this redshift bin
+        bin_data = np.concatenate(processed_theta_arrays, axis=1)
         if bin_ranges:
-            start_bin, end_bin = bin_ranges[i]
-            bin_data = bin_data[:, start_bin:end_bin+1]  # +1 because end is inclusive
-            print(f"Applied bin range [{start_bin}:{end_bin}] to redshift bin {i+1}")
-        
+            print(f"Applied bin range [{start_bin}:{end_bin}] to redshift bin {i+1} for each theta")
+
         bin_data_list.append(bin_data)
-    
+
     # Concatenate all bins together along feature dimension
     l1_combined = np.concatenate(bin_data_list, axis=1)
     print(f"Combined training datavector shape (before preprocessing): {l1_combined.shape}")
@@ -455,7 +498,7 @@ def main():
     # Optionally save the feature mask
     if args.save_feature_mask:
         os.makedirs(args.output_dir, exist_ok=True)
-        mask_filename = f"feature_mask_{args.training_dataset}_{args.simulation_type}_{bin_spec}"
+        mask_filename = f"feature_mask_{args.training_dataset}_{args.simulation_type}_{bin_spec}_{theta_desc_pref}"
         if args.noisy:
             mask_filename += f"_noisy_s{args.noise_level:.2f}"
         if bin_ranges:
@@ -480,6 +523,8 @@ def main():
     
     # Create a descriptive checkpoint name based on data configuration
     datavector_desc = f"{args.training_dataset}_{args.simulation_type}_{bin_spec}"
+    # Include theta(s) used during preprocessing so checkpoint names reflect the run
+    datavector_desc += f"_{theta_desc_pref}"
     if args.noisy:
         datavector_desc += f"_noisy_s{args.noise_level:.2f}"
     if bin_ranges:
@@ -530,7 +575,7 @@ def main():
         ecp, alpha = run_tarp_coverage_test(posterior, l1_combined, params, args)
         
         # Create filename base for coverage plots
-        coverage_filename_base = f"l1norms_{args.training_dataset}_{args.simulation_type}_{bin_spec}"
+        coverage_filename_base = f"l1norms_{args.training_dataset}_{args.simulation_type}_{bin_spec}_{theta_desc_pref}"
         if args.noisy:
             coverage_filename_base += f"_noisy_s{args.noise_level:.2f}"
         if bin_ranges:
@@ -540,27 +585,29 @@ def main():
             else:
                 range_desc = "_binranges" + "-".join([f"{start}-{end}" for start, end in bin_ranges])
                 coverage_filename_base += range_desc
-        
+
         plot_tarp_coverage(ecp, alpha, args, args.output_dir, coverage_filename_base)
 
-    # Load fiducial data for each bin
+    # Load fiducial data for each bin. fiducial_paths is a list of lists (per-bin, per-theta)
     fid_data_list = []
-    for i, fiducial_path in enumerate(fiducial_paths):
-        if not os.path.exists(fiducial_path):
-            raise FileNotFoundError(f"Fiducial data file not found: {fiducial_path}")
-        
-        fid_full = np.load(fiducial_path, allow_pickle=True)
-        print(f"Loaded fiducial data from {fiducial_path}, shape: {fid_full.shape}")
-        
-        # Average over all fiducial permutations
-        fid_mean = np.mean(fid_full, axis=0)
-        
-        # Apply bin range if specified
-        if bin_ranges:
-            start_bin, end_bin = bin_ranges[i]
-            fid_mean = fid_mean[start_bin:end_bin+1]  # +1 because end is inclusive
-        
-        fid_data_list.append(fid_mean)
+    for i, fid_paths_per_bin in enumerate(fiducial_paths):
+        fid_means_per_theta = []
+        for p in fid_paths_per_bin:
+            if not os.path.exists(p):
+                raise FileNotFoundError(f"Fiducial data file not found: {p}")
+            fid_full = np.load(p, allow_pickle=True)
+            print(f"Loaded fiducial data from {p}, shape: {fid_full.shape}")
+            # Average over all fiducial permutations
+            fid_mean_theta = np.mean(fid_full, axis=0)
+            # Apply bin range if specified (slice per-theta before concatenation)
+            if bin_ranges:
+                start_bin, end_bin = bin_ranges[i]
+                fid_mean_theta = fid_mean_theta[start_bin:end_bin+1]
+            fid_means_per_theta.append(fid_mean_theta)
+
+        # Concatenate theta-specific fiducial means for this redshift bin
+        fid_concat = np.concatenate(fid_means_per_theta)
+        fid_data_list.append(fid_concat)
     
     # Concatenate all bins' fiducial data
     fid_mean_combined = np.concatenate(fid_data_list)
@@ -629,7 +676,7 @@ def main():
     # Save plot with descriptive filename
     os.makedirs(args.output_dir, exist_ok=True)
     
-    plot_filename = f"posterior_{args.training_dataset}_{args.simulation_type}_vs_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}"
+    plot_filename = f"posterior_{args.training_dataset}_{args.simulation_type}_vs_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}_{theta_desc_pref}"
     if args.noisy:
         plot_filename += f"_noisy_s{args.noise_level:.2f}"
     if bin_ranges:
@@ -648,7 +695,7 @@ def main():
 
     # Save posterior samples with descriptive filename
     os.makedirs(args.samples_dir, exist_ok=True)
-    samples_filename = f"posterior_samples_{args.training_dataset}_{args.simulation_type}_vs_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}"
+    samples_filename = f"posterior_samples_{args.training_dataset}_{args.simulation_type}_vs_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}_{theta_desc_pref}"
     if args.noisy:
         samples_filename += f"_noisy_s{args.noise_level:.2f}"
     if bin_ranges:
