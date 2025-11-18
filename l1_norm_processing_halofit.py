@@ -149,7 +149,7 @@ def compute_l1_norm_from_pdf(kappa_values, pdf_values):
 
 def process_file(file_path, bin_number=2, noise_level=0.26, add_noise=True, 
                 theta=15.0, nbins=500, nside=512, kappa_range=None, 
-                lmax_factor=3.0, fast_mode=False, verbose=False):
+                lmax_factor=3.0, fast_mode=False, dataset_suffix="halofit", verbose=False):
     """
     Process a single file using cosmogrid approach:
     - Load kappa map
@@ -165,17 +165,18 @@ def process_file(file_path, bin_number=2, noise_level=0.26, add_noise=True,
                    If None, uses data range.
     - lmax_factor: lmax = nside * lmax_factor - 1
     - fast_mode: use faster HEALPix settings (iter=0)
+    - dataset_suffix: suffix to add to output files (e.g., "halofit", "fiducial")
     """
     
-    # Define output filenames based on bin number and noise level
+    # Define output filenames based on bin number, theta, and noise level
     if add_noise:
-        variance_suffix = f"_variance_bin{bin_number}_noisy_s{noise_level:.2f}_halofit.npy"
-        l1_suffix = f"_l1_norm_bin{bin_number}_noisy_s{noise_level:.2f}_halofit.npy"
-        kappa_suffix = f"_kappa_bin{bin_number}_noisy_s{noise_level:.2f}_halofit.npy"
+        variance_suffix = f"_variance_bin{bin_number}_theta{theta:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
+        l1_suffix = f"_l1_norm_bin{bin_number}_theta{theta:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
+        kappa_suffix = f"_kappa_bin{bin_number}_theta{theta:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
     else:
-        variance_suffix = f"_variance_bin{bin_number}_halofit.npy"
-        l1_suffix = f"_l1_norm_bin{bin_number}_halofit.npy"
-        kappa_suffix = f"_kappa_bin{bin_number}_halofit.npy"
+        variance_suffix = f"_variance_bin{bin_number}_theta{theta:.1f}_{dataset_suffix}.npy"
+        l1_suffix = f"_l1_norm_bin{bin_number}_theta{theta:.1f}_{dataset_suffix}.npy"
+        kappa_suffix = f"_kappa_bin{bin_number}_theta{theta:.1f}_{dataset_suffix}.npy"
     
     variance_save_path = file_path.replace(".h5", variance_suffix)
     l1_save_path = file_path.replace(".h5", l1_suffix)
@@ -303,18 +304,22 @@ def build_file_paths_from_indices(indices, base_dir, baryonified=False):
 def main():
     """Main function to handle command-line arguments and run processing."""
     parser = argparse.ArgumentParser(
-        description="Process HEALPix maps to compute L1 norms (Halofit selection only)."
+        description="Process HEALPix maps to compute L1 norms (Halofit selection or fiducial cosmology)."
     )
+    
+    # Dataset selection
+    parser.add_argument("--fiducial", action="store_true",
+                        help="Process fiducial cosmology instead of Halofit selection.")
     
     # Selection file
     parser.add_argument("--selection-file", type=str,
                         default="/home/tersenov/software/bar_impact/data/selected_indices_halofit.npy",
-                        help="Path to the Halofit selection indices file.")
+                        help="Path to the Halofit selection indices file (ignored if --fiducial is set).")
     
     # Main processing options
     parser.add_argument("--base-dir", type=str,
-                        default="/home/tersenov/CosmoGridV1/stage3_forecast/grid/",
-                        help="Base directory for data.")
+                        default=None,
+                        help="Base directory for data (default: auto-selected based on --fiducial).")
     parser.add_argument("--baryonified", action="store_true",
                         help="Use baryonified maps instead of nobaryons maps.")
     
@@ -367,15 +372,40 @@ def main():
     
     args = parser.parse_args()
     
-    # Load selected indices
-    selected_indices = load_selected_indices(args.selection_file)
+    # Set the base directory based on fiducial flag or override
+    if args.base_dir:
+        base_dir = args.base_dir
+    elif args.fiducial:
+        base_dir = "/home/tersenov/CosmoGridV1/stage3_forecast/fiducial/cosmo_fiducial/"
+    else:
+        base_dir = "/home/tersenov/CosmoGridV1/stage3_forecast/grid/"
     
-    # Build file paths from selected indices
-    file_paths = build_file_paths_from_indices(
-        selected_indices, 
-        args.base_dir, 
-        args.baryonified
-    )
+    # Set the filename based on the baryonified flag
+    if args.baryonified:
+        filename = "projected_probes_maps_baryonified512.h5"
+    else:
+        filename = "projected_probes_maps_nobaryons512.h5"
+    
+    # Build file paths based on dataset type
+    if args.fiducial:
+        # Fiducial cosmology: process all permutations
+        perm_dirs = [f"perm_{i:04d}" for i in range(200)]  # "perm_0000" to "perm_0199"
+        file_paths = [
+            os.path.join(base_dir, perm, filename)
+            for perm in perm_dirs
+            if os.path.exists(os.path.join(base_dir, perm, filename))
+        ]
+        print(f"Fiducial mode: found {len(file_paths)} files")
+    else:
+        # Halofit selection: load selected indices
+        selected_indices = load_selected_indices(args.selection_file)
+        
+        # Build file paths from selected indices
+        file_paths = build_file_paths_from_indices(
+            selected_indices, 
+            base_dir, 
+            args.baryonified
+        )
     
     if not file_paths:
         print("Error: No valid file paths found!")
@@ -421,8 +451,9 @@ def main():
     
     # Print configuration information
     map_type = "baryonified" if args.baryonified else "nobaryons"
+    dataset_type = "fiducial" if args.fiducial else "Halofit selection"
     print(f"\n{'='*70}")
-    print(f"Processing {len(file_paths)} {map_type} files (Halofit selection)")
+    print(f"Processing {len(file_paths)} {map_type} files ({dataset_type})")
     print(f"{'='*70}")
     if len(bin_numbers) == 1:
         print(f"Map key: kg/stage3_lensing{bin_numbers[0]}")
@@ -439,6 +470,8 @@ def main():
     
     # Process each bin
     all_bin_results = {}
+    dataset_suffix = "fiducial" if args.fiducial else "halofit"
+    
     for bin_number in bin_numbers:
         print(f"\n{'='*60}")
         print(f"Processing bin {bin_number}")
@@ -446,13 +479,13 @@ def main():
         
         # Determine suffix for output files
         if args.no_noise:
-            variance_suffix = f"_variance_bin{bin_number}_halofit.npy"
-            l1_suffix = f"_l1_norm_bin{bin_number}_halofit.npy"
-            kappa_suffix = f"_kappa_bin{bin_number}_halofit.npy"
+            variance_suffix = f"_variance_bin{bin_number}_theta{args.theta:.1f}_{dataset_suffix}.npy"
+            l1_suffix = f"_l1_norm_bin{bin_number}_theta{args.theta:.1f}_{dataset_suffix}.npy"
+            kappa_suffix = f"_kappa_bin{bin_number}_theta{args.theta:.1f}_{dataset_suffix}.npy"
         else:
-            variance_suffix = f"_variance_bin{bin_number}_noisy_s{args.noise_level:.2f}_halofit.npy"
-            l1_suffix = f"_l1_norm_bin{bin_number}_noisy_s{args.noise_level:.2f}_halofit.npy"
-            kappa_suffix = f"_kappa_bin{bin_number}_noisy_s{args.noise_level:.2f}_halofit.npy"
+            variance_suffix = f"_variance_bin{bin_number}_theta{args.theta:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
+            l1_suffix = f"_l1_norm_bin{bin_number}_theta{args.theta:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
+            kappa_suffix = f"_kappa_bin{bin_number}_theta{args.theta:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
         print(f"Variance output suffix: {variance_suffix}")
         print(f"L1 norm output suffix: {l1_suffix}")
         print(f"Kappa output suffix: {kappa_suffix}")
@@ -470,6 +503,7 @@ def main():
                 kappa_range=kappa_range,
                 lmax_factor=args.lmax_factor,
                 fast_mode=args.fast_mode,
+                dataset_suffix=dataset_suffix,
                 verbose=args.verbose,
             )
             results = list(tqdm(
@@ -512,6 +546,7 @@ def main():
             # Generate default output paths if not specified
             combined_output_base = args.combined_output
             map_suffix = "baryonified" if args.baryonified else "nobaryons"
+            dataset_name = "fiducial" if args.fiducial else "halofit"
             
             if args.no_noise:
                 noise_str = ""
@@ -520,24 +555,24 @@ def main():
             
             if not combined_output_base:
                 combined_variance_output = os.path.join(
-                    args.base_dir, 
-                    f"all_variances_halofit_{map_suffix}_bin{bin_number}{noise_str}.npy"
+                    base_dir, 
+                    f"all_variances_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}{noise_str}.npy"
                 )
                 combined_l1_output = os.path.join(
-                    args.base_dir,
-                    f"all_l1_norms_halofit_{map_suffix}_bin{bin_number}{noise_str}.npy"
+                    base_dir,
+                    f"all_l1_norms_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}{noise_str}.npy"
                 )
                 combined_kappa_output = os.path.join(
-                    args.base_dir,
-                    f"all_kappas_halofit_{map_suffix}_bin{bin_number}{noise_str}.npy"
+                    base_dir,
+                    f"all_kappas_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}{noise_str}.npy"
                 )
             else:
                 # If custom output is specified, create separate files for variance, L1, and kappa
                 base, ext = os.path.splitext(combined_output_base)
                 if len(bin_numbers) > 1:
-                    combined_variance_output = f"{base}_variance_bin{bin_number}{ext}"
-                    combined_l1_output = f"{base}_l1_bin{bin_number}{ext}"
-                    combined_kappa_output = f"{base}_kappa_bin{bin_number}{ext}"
+                    combined_variance_output = f"{base}_variance_bin{bin_number}_theta{args.theta:.1f}{ext}"
+                    combined_l1_output = f"{base}_l1_bin{bin_number}_theta{args.theta:.1f}{ext}"
+                    combined_kappa_output = f"{base}_kappa_bin{bin_number}_theta{args.theta:.1f}{ext}"
                 else:
                     combined_variance_output = f"{base}_variance{ext}"
                     combined_l1_output = f"{base}_l1{ext}"
@@ -594,9 +629,10 @@ def main():
             else:
                 print(f"No valid files found for bin {bin_number} combined output!")
     
+    dataset_label = "fiducial cosmology" if args.fiducial else "Halofit selection"
     print(f"\n{'='*70}")
     print(f"Processing complete!")
-    print(f"Total simulations processed: {len(file_paths)} (Halofit selection)")
+    print(f"Total simulations processed: {len(file_paths)} ({dataset_label})")
     print(f"{'='*70}")
 
 
