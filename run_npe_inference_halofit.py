@@ -112,6 +112,8 @@ def parse_arguments():
                         help="Variance threshold for removing zero-variance features (default: 1e-10)")
     parser.add_argument("--save-feature-mask", action="store_true",
                         help="Save the feature mask used for preprocessing")
+    parser.add_argument("--rebin-factor", type=int, default=1,
+                        help="Rebin datavectors by averaging this many adjacent bins (default: 1, no rebinning)")
     
     # GPU configuration
     parser.add_argument("--gpu", type=str, default="0", 
@@ -169,6 +171,43 @@ def remove_zero_variance_features(data, threshold=1e-10, verbose=True):
     filtered_data = data[:, valid_indices]
     
     return filtered_data, valid_indices
+
+def rebin_datavector(data, rebin_factor, verbose=True):
+    """
+    Rebin datavector by averaging adjacent bins to reduce dimensionality.
+    
+    Args:
+        data: numpy array of shape (n_samples, n_features)
+        rebin_factor: number of adjacent bins to average together
+        verbose: if True, print rebinning information
+        
+    Returns:
+        rebinned_data: data with reduced feature dimension
+    """
+    if rebin_factor <= 1:
+        return data
+    
+    n_samples, n_features = data.shape
+    n_rebinned = n_features // rebin_factor
+    
+    # Truncate to make it evenly divisible
+    n_kept = n_rebinned * rebin_factor
+    if n_kept < n_features:
+        data = data[:, :n_kept]
+        if verbose:
+            print(f"\nRebinning: Truncating {n_features - n_kept} features to make evenly divisible by {rebin_factor}")
+    
+    # Reshape and average
+    rebinned_data = data.reshape(n_samples, n_rebinned, rebin_factor).mean(axis=2)
+    
+    if verbose:
+        print(f"\nRebinning datavector:")
+        print(f"  Rebin factor: {rebin_factor}")
+        print(f"  Original features: {n_features}")
+        print(f"  Rebinned features: {n_rebinned}")
+        print(f"  Reduction: {100*(1 - n_rebinned/n_features):.1f}%")
+    
+    return rebinned_data
 
 def parse_bin_ranges(args, num_redshift_bins):
     """Parse bin range arguments and return list of (start, end) tuples for each redshift bin."""
@@ -482,13 +521,18 @@ def main():
     if params.shape[0] != l1_combined.shape[0]:
         raise ValueError(f"Mismatch between params ({params.shape[0]}) and data ({l1_combined.shape[0]}) shapes!")
 
-    # Remove zero-variance features to prevent NaN losses
+    # Apply rebinning if requested (before variance filtering)
+    if args.rebin_factor > 1:
+        l1_combined = rebin_datavector(l1_combined, args.rebin_factor, verbose=True)
+        print(f"Combined training datavector shape (after rebinning): {l1_combined.shape}")
+
+    # Remove zero-variance features AFTER rebinning to prevent NaN losses
     l1_combined, valid_feature_mask = remove_zero_variance_features(
         l1_combined, 
         threshold=args.variance_threshold, 
         verbose=True
     )
-    print(f"Combined training datavector shape (after preprocessing): {l1_combined.shape}")
+    print(f"Combined training datavector shape (after variance filtering): {l1_combined.shape}")
     
     # Save the valid feature mask for later use with fiducial data
     # This ensures we apply the same filtering to the fiducial observation
@@ -499,6 +543,8 @@ def main():
     if args.save_feature_mask:
         os.makedirs(args.output_dir, exist_ok=True)
         mask_filename = f"feature_mask_{args.training_dataset}_{args.simulation_type}_{bin_spec}_{theta_desc_pref}"
+        if args.rebin_factor > 1:
+            mask_filename += f"_rebin{args.rebin_factor}"
         if args.noisy:
             mask_filename += f"_noisy_s{args.noise_level:.2f}"
         if bin_ranges:
@@ -525,6 +571,8 @@ def main():
     datavector_desc = f"{args.training_dataset}_{args.simulation_type}_{bin_spec}"
     # Include theta(s) used during preprocessing so checkpoint names reflect the run
     datavector_desc += f"_{theta_desc_pref}"
+    if args.rebin_factor > 1:
+        datavector_desc += f"_rebin{args.rebin_factor}"
     if args.noisy:
         datavector_desc += f"_noisy_s{args.noise_level:.2f}"
     if bin_ranges:
@@ -576,6 +624,8 @@ def main():
         
         # Create filename base for coverage plots
         coverage_filename_base = f"l1norms_{args.training_dataset}_{args.simulation_type}_{bin_spec}_{theta_desc_pref}"
+        if args.rebin_factor > 1:
+            coverage_filename_base += f"_rebin{args.rebin_factor}"
         if args.noisy:
             coverage_filename_base += f"_noisy_s{args.noise_level:.2f}"
         if bin_ranges:
@@ -612,6 +662,14 @@ def main():
     # Concatenate all bins' fiducial data
     fid_mean_combined = np.concatenate(fid_data_list)
     print(f"Combined fiducial data shape (before preprocessing): {fid_mean_combined.shape}")
+    
+    # Apply rebinning if requested (must match training data)
+    if args.rebin_factor > 1:
+        # Fiducial is 1D, so reshape to 2D, rebin, then flatten
+        fid_mean_combined = fid_mean_combined.reshape(1, -1)
+        fid_mean_combined = rebin_datavector(fid_mean_combined, args.rebin_factor, verbose=False)
+        fid_mean_combined = fid_mean_combined.flatten()
+        print(f"Combined fiducial data shape (after rebinning): {fid_mean_combined.shape}")
     
     # Apply the same feature filtering as training data
     if fid_mean_combined.shape[0] != valid_feature_mask.shape[0]:
@@ -677,6 +735,8 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     
     plot_filename = f"posterior_{args.training_dataset}_{args.simulation_type}_vs_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}_{theta_desc_pref}"
+    if args.rebin_factor > 1:
+        plot_filename += f"_rebin{args.rebin_factor}"
     if args.noisy:
         plot_filename += f"_noisy_s{args.noise_level:.2f}"
     if bin_ranges:
@@ -696,6 +756,8 @@ def main():
     # Save posterior samples with descriptive filename
     os.makedirs(args.samples_dir, exist_ok=True)
     samples_filename = f"posterior_samples_{args.training_dataset}_{args.simulation_type}_vs_{args.fiducial_dataset}_{args.fiducial_type}_{bin_spec}_{theta_desc_pref}"
+    if args.rebin_factor > 1:
+        samples_filename += f"_rebin{args.rebin_factor}"
     if args.noisy:
         samples_filename += f"_noisy_s{args.noise_level:.2f}"
     if bin_ranges:
