@@ -59,6 +59,7 @@ class Cosmology_function:
         self.H0 = 100.0 * h  
         self.Om = Oc + Ob
         self.ns = kwargs.get("ns", 0.973)  # scalar spectral index
+        print(f"   Using scalar spectral index ns = {self.ns}")
 
         # power normalization (either sigma8 or As must be set)
         self.sig8 = kwargs.get("sigma8", None)
@@ -236,7 +237,7 @@ class Cosmology_function:
         chi_arr = np.asanyarray(chi_target)
         z_arr = np.empty_like(chi_arr, dtype=float)
         for i, chi_t in enumerate(chi_arr):
-            z_arr[i] = find_root(chi_t).root
+            z_arr[i] = find_root(chi_t) #.root
         return z_arr
 
     def get_nonlinear_pk(self, z, ks=None):
