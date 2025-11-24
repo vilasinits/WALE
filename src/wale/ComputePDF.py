@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.optimize import newton
 import matplotlib.pyplot as plt
+from scipy.interpolate import PchipInterpolator
 
 from wale.RateFunction import get_scaled_cgf
 
@@ -31,7 +32,7 @@ class computePDF:
         Grid of kappa values over which the PDF is evaluated.
     """
 
-    def __init__(self, variables, variance, plot_scgf=False):
+    def __init__(self, variables, variance, kappa=None, plot_scgf=False):
         """
         Initialize the PDF computation class.
 
@@ -47,6 +48,11 @@ class computePDF:
         self.variables = variables
         self.plot_scgf = plot_scgf
         self.variance = variance
+        if kappa is not None:
+            self.kappa = kappa
+        else:
+            edges = np.linspace(-0.06, 0.06, 801)
+            self.kappa = 0.5 * (edges[:-1] + edges[1:])
         self.pdf_values, self.kappa_values = self.compute_pdf_values()
 
     def get_scgf(self):
@@ -98,9 +104,11 @@ class computePDF:
         coeffs = np.polyfit(x_data, y_data, 7)
         p = np.poly1d(coeffs)
         dp = p.deriv()
+        # p = PchipInterpolator(x_data, y_data)   # replaces polyfit
+        # dp = p.derivative()
         # print("the coeffs are", p.coeffs)
-        print("The variance from PDF is: ", p.coeffs[-2] ** 2)
-        lambda_new = 1j * np.arange(0, 100000)
+        # print("   The variance from PDF is: ", p.coeffs[-2] ** 2)
+        lambda_new = 1j * np.arange(0, 60000)
 
         taus = np.zeros_like(lambda_new, dtype=np.complex128)
 
@@ -152,7 +160,7 @@ class computePDF:
         kappa_values : ndarray
             Grid of kappa values over which the PDF is computed.
         """
-        kappa_values = np.linspace(-0.06, 0.06, 501)
+        kappa_values = self.kappa #np.linspace(-0.06, 0.06, 501)
         lambda_new, phi_values = self.compute_phi_values()
         pdf_values = [
             self.compute_pdf_for_kappa(kappa, lambda_new, phi_values)

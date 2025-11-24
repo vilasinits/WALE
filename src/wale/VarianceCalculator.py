@@ -29,44 +29,9 @@ class Variance:
         """
         self.cosmo = cosmo
         self.filter_type = filter_type
-        print("Variance module initialized...")
+        # print(" ")
+        # print("   Variance module initialized...")
         self.pk = pk
-
-    def linear_sigma2(self, redshift, R1, R2=None, **kwargs):
-        """
-        Calculates the linear variance σ² for given scales and redshift, considering the specified model adjustments.
-
-        Parameters:
-            redshift (float): The redshift at which to evaluate the variance.
-            R1 (float): The first scale radius.
-            R2 (float, optional): The second scale radius. Defaults to R1 if not specified.
-
-        Returns:
-            float: The linear variance σ² at the given scales and redshift.
-        """
-        if R2 is None:
-            R2 = R1
-        else:
-            R2 = R2
-
-        # pk = self.PK_interpolator_linear.P(redshift, self.cosmo.k_values)
-        pk = (
-            ccl.linear_matter_power(
-                self.cosmo.cosmoccl, self.cosmo.k, 1 / (1 + redshift)
-            )
-            * self.cosmo.h**3
-        )
-        if self.filter_type == "tophat":
-            w1_2D = top_hat_filter(self.cosmo.k, R1)
-            w2_2D = top_hat_filter(self.cosmo.k, R2)
-            w2 = w1_2D * w2_2D
-        elif self.filter_type == "starlet":
-            w1_2D = starlet_filter(self.cosmo.k, R1)
-            w2_2D = starlet_filter(self.cosmo.k, R2)
-            w2 = w1_2D * w2_2D
-        constant = 1.0 / 2.0 / np.pi
-        integrand = self.cosmo.k_values * pk * w2 * constant
-        return simpson(integrand, x=self.cosmo.k_values)
 
     def nonlinear_sigma2(self, redshift, R1, R2=None, **kwargs):
         """
@@ -88,7 +53,7 @@ class Variance:
         pk = kwargs["pk"] if "pk" in kwargs else self.pk[redshift]
 
         # pk = self.pk[redshift]
-        k = self.cosmo.k * self.cosmo.h
+        k = self.cosmo.k      
         if self.filter_type == "tophat":
             w1_2D = top_hat_filter(self.cosmo.k, R1)
             w2_2D = top_hat_filter(self.cosmo.k, R2)
@@ -101,7 +66,7 @@ class Variance:
             w2 = w1_2D * w2_2D
         constant = 1.0 / 2.0 / np.pi
         integrand = k * pk * w2 * constant
-        return simpson(integrand, x=k) / self.cosmo.h
+        return simpson(integrand, x=k) 
 
     def get_sig_slice(self, z, R1, R2):
         """

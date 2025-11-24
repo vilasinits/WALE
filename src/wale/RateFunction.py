@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import root
 from numpy import newaxis
+from numba import njit
 
 
 def get_tau(rho):
@@ -20,7 +21,7 @@ def get_tau(rho):
     nu = 1.4
     return nu * (1.0 - rho ** (-1.0 / nu))
 
-
+# @njit
 def get_psi_2cell(variance, chi, recal, z, delta1, delta2, theta1, theta2):
     """
     Compute the 2-cell action ψ(δ₁, δ₂) using large-deviation theory.
@@ -229,7 +230,7 @@ def get_scaled_cgf(
     )
     return scgf
 
-
+# @njit
 def get_psi_derivative_delta1(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
@@ -255,7 +256,7 @@ def get_psi_derivative_delta1(
     derivative = (psi_plus_h - psi_minus_h) / (2 * delh)
     return derivative
 
-
+# @njit
 def get_psi_derivative_delta2(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
@@ -310,7 +311,7 @@ def get_psi_2nd_derivative_delta1(
     second_derivative = (psi_plus_h - (2.0 * psi_at_delta1) + psi_minus_h) / (delh**2.0)
     return second_derivative
 
-
+# @njit
 def get_psi_2nd_derivative_delta2(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
@@ -339,7 +340,7 @@ def get_psi_2nd_derivative_delta2(
     second_derivative = (psi_plus_h - (2.0 * psi_at_delta2) + psi_minus_h) / (delh**2.0)
     return second_derivative
 
-
+# @njit
 def get_psi_mixed_derivative_delta1_delta2(
     deld, variance, chi, recal, z, delta1, delta2, theta1, theta2
 ):
@@ -375,7 +376,7 @@ def get_psi_mixed_derivative_delta1_delta2(
     ) / (4.0 * delh * delh)
     return mixed_derivative
 
-
+# @njit
 def psi_derivative_determinant(
     deld, delta1, delta2, z, variance, chi, recal, theta1, theta2
 ):

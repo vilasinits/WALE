@@ -1,7 +1,5 @@
 # from imports import *
 import numpy as np
-
-# import scipy.special
 from scipy import special as sp
 from functools import lru_cache
 import mpmath as mp
@@ -19,21 +17,7 @@ def top_hat_filter(k, R):
     """
     return 2.0 * sp.j1(k * R) / (k * R)
 
-
-# def top_hat_window(R):
-#     """
-#     Calculates the top-hat window function for a given radius.
-
-#     Parameters:
-#         R (float or numpy.ndarray): The scale (or array of scales) at which to calculate the window function.
-
-#     Returns:
-#         numpy.ndarray: The top-hat window function values at the given scale(s).
-#     """
-#     return 2.0 * sp.j1(R) / R
-
-
-def get_W2D_FL(window_radius, map_shape, filter_type, L=505):
+def get_W2D_FL(window_radius, map_shape, filter_type, **kwargs):
     """
     Constructs a 2D Fourier-space window function for a top-hat filter.
 
@@ -49,6 +33,11 @@ def get_W2D_FL(window_radius, map_shape, filter_type, L=505):
         2D numpy array representing the Fourier-space window.
     """
     N = map_shape[0]
+    if kwargs.get("L") is not None:
+        L = kwargs["L"]
+    else:
+        L = 505.0  # Default value, e.g., for SLICS
+        
     dx = N / N
     # Generate Fourier frequencies.
     kx = np.fft.fftshift(np.fft.fftfreq(N, dx))
