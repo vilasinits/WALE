@@ -31,6 +31,7 @@ class Variance:
         self.filter_type = filter_type
         # print(" ")
         # print("   Variance module initialized...")
+
         self.pk = pk
 
     def nonlinear_sigma2(self, redshift, R1, R2=None, **kwargs):

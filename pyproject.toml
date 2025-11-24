@@ -26,6 +26,12 @@ dependencies = [
     "pytest-cov",
     "ipykernel",
     "camb",
+    "numba",
+    "distinctipy",
+    "classy",
+    "fast-pt",
+    "joblib",
+    "scikit-image",
 ]
 
 [project.optional-dependencies]
@@ -38,4 +44,9 @@ dev = [
     "sphinx-rtd-theme",
     "numpydoc",
     "black",
+    
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]         
+include = ["wale*"]

@@ -226,6 +226,7 @@ def compute_sigma_kappa_squared(
     ell_min = 2.0
     ell_max = 2e4 #min(5e6, 200.0 / max(theta_rad, 1e-6))
     # print(f"  Computing σ²_κ at θ={theta_arcmin:.2f} arcmin using ℓ in [{ell_min:.1f}, {ell_max:.1f}]")
+
     ell = np.logspace(np.log10(ell_min), np.log10(ell_max), 500)
 
     chis = np.asarray(chis, dtype=float)                # (n_chi,)

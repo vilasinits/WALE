@@ -59,6 +59,7 @@ class Cosmology_function:
         self.H0 = 100.0 * h  
         self.Om = Oc + Ob
         self.ns = kwargs.get("ns", 0.973)  # scalar spectral index
+        print(f"   Using scalar spectral index ns = {self.ns}")
 
         # power normalization (either sigma8 or As must be set)
         self.sig8 = kwargs.get("sigma8", None)
@@ -94,11 +95,13 @@ class Cosmology_function:
            
 
         self.cosmoccl = _set_params(self)
+
         self.kmin = kwargs.get("kmin", 1e-4)
         self.kmax = kwargs.get("kmax", 10.0)
         self.dk = kwargs.get("dk", 0.1)
         self.k = np.arange(self.kmin, self.kmax, self.dk)
         self.nk = len(self.k)
+
     def _E(self, z):
         """
         Compute the dimensionless Hubble expansion rate E(z) = H(z)/H0.

@@ -128,8 +128,8 @@ class CriticalPointsFinder:
         self.variables = variables
         self.plot = plot
         self.smooth_sigma = float(smooth_sigma)
-
         # print(f"       Setting ngrid = {ngrid}. Increase for accuracy; runtime ~ O(ngrid^2).")
+
         self.delta1_vals = np.linspace(-0.99, 1.99, ngrid)
         self.delta2_vals = np.linspace(-0.99, 1.99, ngrid)
         self.D1, self.D2 = np.meshgrid(self.delta1_vals, self.delta2_vals, indexing="ij")
@@ -458,6 +458,7 @@ def find_critical_points_for_cosmo(
     """
     # print("   Finding critical points (optimized)...")
 
+
     # Align slices for lw, z, chis (IMPORTANT!)
     lw_slice = variables.lensingweights[min_z:max_z]
     z_slice = variables.redshifts[min_z:max_z]
@@ -497,9 +498,9 @@ def find_critical_points_for_cosmo(
 
     smallest_positive = np.min(positive) if positive.size else None
     largest_negative = np.max(negative) if negative.size else None
-
     # print("       Smallest positive / largest negative:",
         #   smallest_positive, "/", largest_negative)
+
     return smallest_positive, largest_negative
 
 

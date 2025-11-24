@@ -1687,6 +1687,7 @@ def find_critical_points_for_cosmo_fast(
         return None, None
     pos = arr[arr > 0]; neg = arr[arr < 0]
     # print(" the critical points are: ", np.min(pos), np.max(neg))
+
     return (float(np.min(pos)) if pos.size else None,
             float(np.max(neg)) if neg.size else None)
 

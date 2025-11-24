@@ -1,6 +1,5 @@
 # Overview
 
-
 The `WALE` package provides a theoretical framework to model the wavelet ℓ₁-norm of weak lensing convergence maps. This is achieved using predictions of the one-point probability distribution function (PDF) at each wavelet scale, based on large-deviation theory (LDT). The method enables simulation-free inference of higher-order statistics in cosmological fields.
 
 📘 API Documentation: https://vilasinits.github.io/WALE/

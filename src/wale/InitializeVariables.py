@@ -68,6 +68,7 @@ class InitialiseVariables:
         # print(f"      Number of planes: {self.nplanes}")
         # print(f"      Angular scale theta1 (radians): {self.theta1_radian}, arcmin: {theta1}")
 
+
         if self.zsource is None and self.nz_file is None:
             raise ValueError("Please specify either 'zs' or 'nz_file'.")
 
@@ -90,6 +91,7 @@ class InitialiseVariables:
             )
         else:
             # print("      Lensing weights calculated from source redshift")
+
             self.redshifts, self.lensingweights = self.cosmo.get_lensing_weight_array(
                 self.chis, self.chisource
             )
