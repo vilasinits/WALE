@@ -148,35 +148,38 @@ def compute_l1_norm_from_pdf(kappa_values, pdf_values):
 
 
 def process_file(file_path, bin_number=2, noise_level=0.26, add_noise=True, 
-                theta=15.0, nbins=500, nside=512, kappa_range=None, 
-                lmax_factor=3.0, fast_mode=False, dataset_suffix="halofit", verbose=False):
+                theta=15.0, theta_ratio=2.0, nbins=500, nside=512, kappa_range=None, 
+                lmax_factor=3.0, fast_mode=False, dataset_suffix="halofit", verbose=False,
+                force_overwrite=False):
     """
     Process a single file using cosmogrid approach:
     - Load kappa map
     - Optionally add shape noise
-    - Smooth with theta and 2*theta
+    - Smooth with theta and theta_ratio*theta
     - Compute variance of the difference
     - Create PDF histogram with fixed kappa range
     - Compute L1 norm vector as |kappa| * pdf
     - Save variance (scalar), L1 norm vector (array), and kappa vector (array)
     
     Parameters:
+    - theta_ratio: ratio for second smoothing scale (default: 2.0 for 2*theta)
     - kappa_range: tuple (kappa_min, kappa_max) for fixed histogram range. 
                    If None, uses data range.
     - lmax_factor: lmax = nside * lmax_factor - 1
     - fast_mode: use faster HEALPix settings (iter=0)
     - dataset_suffix: suffix to add to output files (e.g., "halofit", "fiducial")
+    - force_overwrite: if True, overwrite existing files
     """
     
-    # Define output filenames based on bin number, theta, and noise level
+    # Define output filenames based on bin number, theta, theta_ratio, and noise level
     if add_noise:
-        variance_suffix = f"_variance_bin{bin_number}_theta{theta:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
-        l1_suffix = f"_l1_norm_bin{bin_number}_theta{theta:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
-        kappa_suffix = f"_kappa_bin{bin_number}_theta{theta:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
+        variance_suffix = f"_variance_bin{bin_number}_theta{theta:.1f}_ratio{theta_ratio:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
+        l1_suffix = f"_l1_norm_bin{bin_number}_theta{theta:.1f}_ratio{theta_ratio:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
+        kappa_suffix = f"_kappa_bin{bin_number}_theta{theta:.1f}_ratio{theta_ratio:.1f}_noisy_s{noise_level:.2f}_{dataset_suffix}.npy"
     else:
-        variance_suffix = f"_variance_bin{bin_number}_theta{theta:.1f}_{dataset_suffix}.npy"
-        l1_suffix = f"_l1_norm_bin{bin_number}_theta{theta:.1f}_{dataset_suffix}.npy"
-        kappa_suffix = f"_kappa_bin{bin_number}_theta{theta:.1f}_{dataset_suffix}.npy"
+        variance_suffix = f"_variance_bin{bin_number}_theta{theta:.1f}_ratio{theta_ratio:.1f}_{dataset_suffix}.npy"
+        l1_suffix = f"_l1_norm_bin{bin_number}_theta{theta:.1f}_ratio{theta_ratio:.1f}_{dataset_suffix}.npy"
+        kappa_suffix = f"_kappa_bin{bin_number}_theta{theta:.1f}_ratio{theta_ratio:.1f}_{dataset_suffix}.npy"
     
     variance_save_path = file_path.replace(".h5", variance_suffix)
     l1_save_path = file_path.replace(".h5", l1_suffix)
@@ -185,8 +188,8 @@ def process_file(file_path, bin_number=2, noise_level=0.26, add_noise=True,
     # Map key based on bin number
     map_key = f"kg/stage3_lensing{bin_number}"
     
-    # Skip if files already exist
-    if os.path.exists(variance_save_path) and os.path.exists(l1_save_path) and os.path.exists(kappa_save_path):
+    # Skip if files already exist (unless force_overwrite is True)
+    if not force_overwrite and os.path.exists(variance_save_path) and os.path.exists(l1_save_path) and os.path.exists(kappa_save_path):
         if verbose:
             print(f"Skipping {os.path.basename(file_path)}, output files already exist.")
         return variance_save_path, l1_save_path, kappa_save_path
@@ -200,9 +203,9 @@ def process_file(file_path, bin_number=2, noise_level=0.26, add_noise=True,
         if add_noise:
             kg = add_shape_noise(kg, sigma_e=noise_level, nside=nside)
         
-        # Smooth with theta and 2*theta efficiently (compute alm only once)
+        # Smooth with theta and theta_ratio*theta efficiently (compute alm only once)
         kappa_smooth1, kappa_smooth2 = smooth_map_dual(
-            kg, theta, theta * 2, nside=nside, 
+            kg, theta, theta * theta_ratio, nside=nside, 
             lmax_factor=lmax_factor, fast_mode=fast_mode
         )
         
@@ -265,8 +268,12 @@ def build_file_paths_from_indices(indices, base_dir, baryonified=False):
     with open(actual_txt, 'r') as f:
         actual_cosmo_nums = [int(line.strip()) for line in f if line.strip()]
     
-    # Note: Only baryonified512.h5 files exist in the data directories
-    filename = "projected_probes_maps_baryonified512.h5"
+    # Set filename based on baryonified flag
+    # Note: new_grid has nobaryons files, grid has baryonified files
+    if baryonified:
+        filename = "projected_probes_maps_baryonified512.h5"
+    else:
+        filename = "projected_probes_maps_nobaryons512.h5"
     
     file_paths = []
     missing_files = []
@@ -339,6 +346,8 @@ def main():
     # Algorithm parameters
     parser.add_argument("--theta", type=float, default=15.0,
                         help="Smoothing scale in arcmin (default: 15.0)")
+    parser.add_argument("--theta-ratio", type=float, default=2.0,
+                        help="Ratio for second smoothing scale (default: 2.0 for 2*theta)")
     parser.add_argument("--nbins", type=int, default=500,
                         help="Number of bins for PDF histogram (default: 500)")
     parser.add_argument("--nside", type=int, default=512,
@@ -369,6 +378,8 @@ def main():
                         help="Save combined L1 norms to a single file.")
     parser.add_argument("--combined-output", 
                         help="Path for combined output file.")
+    parser.add_argument("--force-overwrite", action="store_true",
+                        help="Overwrite existing output files instead of skipping them.")
     
     args = parser.parse_args()
     
@@ -378,7 +389,8 @@ def main():
     elif args.fiducial:
         base_dir = "/home/tersenov/CosmoGridV1/stage3_forecast/fiducial/cosmo_fiducial/"
     else:
-        base_dir = "/home/tersenov/CosmoGridV1/stage3_forecast/grid/"
+        # Use new_grid for nobaryons, grid for baryonified
+        base_dir = "/home/tersenov/CosmoGridV1/stage3_forecast/new_grid/"
     
     # Set the filename based on the baryonified flag
     if args.baryonified:
@@ -459,7 +471,7 @@ def main():
         print(f"Map key: kg/stage3_lensing{bin_numbers[0]}")
     else:
         print(f"Map keys: {', '.join([f'kg/stage3_lensing{b}' for b in bin_numbers])}")
-    print(f"Smoothing scale (theta): {args.theta} arcmin")
+    print(f"Smoothing scales: {args.theta} arcmin and {args.theta * args.theta_ratio:.1f} arcmin (ratio: {args.theta_ratio})")
     print(f"PDF histogram bins: {args.nbins}")
     print(f"HEALPix nside: {args.nside}")
     print(f"HEALPix lmax: {int(args.nside * args.lmax_factor - 1)} (factor: {args.lmax_factor})")
@@ -479,13 +491,13 @@ def main():
         
         # Determine suffix for output files
         if args.no_noise:
-            variance_suffix = f"_variance_bin{bin_number}_theta{args.theta:.1f}_{dataset_suffix}.npy"
-            l1_suffix = f"_l1_norm_bin{bin_number}_theta{args.theta:.1f}_{dataset_suffix}.npy"
-            kappa_suffix = f"_kappa_bin{bin_number}_theta{args.theta:.1f}_{dataset_suffix}.npy"
+            variance_suffix = f"_variance_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}_{dataset_suffix}.npy"
+            l1_suffix = f"_l1_norm_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}_{dataset_suffix}.npy"
+            kappa_suffix = f"_kappa_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}_{dataset_suffix}.npy"
         else:
-            variance_suffix = f"_variance_bin{bin_number}_theta{args.theta:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
-            l1_suffix = f"_l1_norm_bin{bin_number}_theta{args.theta:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
-            kappa_suffix = f"_kappa_bin{bin_number}_theta{args.theta:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
+            variance_suffix = f"_variance_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
+            l1_suffix = f"_l1_norm_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
+            kappa_suffix = f"_kappa_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}_noisy_s{args.noise_level:.2f}_{dataset_suffix}.npy"
         print(f"Variance output suffix: {variance_suffix}")
         print(f"L1 norm output suffix: {l1_suffix}")
         print(f"Kappa output suffix: {kappa_suffix}")
@@ -498,6 +510,7 @@ def main():
                 noise_level=args.noise_level,
                 add_noise=not args.no_noise,
                 theta=args.theta,
+                theta_ratio=args.theta_ratio,
                 nbins=args.nbins,
                 nside=args.nside,
                 kappa_range=kappa_range,
@@ -505,6 +518,7 @@ def main():
                 fast_mode=args.fast_mode,
                 dataset_suffix=dataset_suffix,
                 verbose=args.verbose,
+                force_overwrite=args.force_overwrite,
             )
             results = list(tqdm(
                 pool.imap(process_func, file_paths, chunksize=args.chunksize),
@@ -556,23 +570,23 @@ def main():
             if not combined_output_base:
                 combined_variance_output = os.path.join(
                     base_dir, 
-                    f"all_variances_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}{noise_str}.npy"
+                    f"all_variances_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}{noise_str}.npy"
                 )
                 combined_l1_output = os.path.join(
                     base_dir,
-                    f"all_l1_norms_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}{noise_str}.npy"
+                    f"all_l1_norms_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}{noise_str}.npy"
                 )
                 combined_kappa_output = os.path.join(
                     base_dir,
-                    f"all_kappas_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}{noise_str}.npy"
+                    f"all_kappas_{dataset_name}_{map_suffix}_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}{noise_str}.npy"
                 )
             else:
                 # If custom output is specified, create separate files for variance, L1, and kappa
                 base, ext = os.path.splitext(combined_output_base)
                 if len(bin_numbers) > 1:
-                    combined_variance_output = f"{base}_variance_bin{bin_number}_theta{args.theta:.1f}{ext}"
-                    combined_l1_output = f"{base}_l1_bin{bin_number}_theta{args.theta:.1f}{ext}"
-                    combined_kappa_output = f"{base}_kappa_bin{bin_number}_theta{args.theta:.1f}{ext}"
+                    combined_variance_output = f"{base}_variance_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}{ext}"
+                    combined_l1_output = f"{base}_l1_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}{ext}"
+                    combined_kappa_output = f"{base}_kappa_bin{bin_number}_theta{args.theta:.1f}_ratio{args.theta_ratio:.1f}{ext}"
                 else:
                     combined_variance_output = f"{base}_variance{ext}"
                     combined_l1_output = f"{base}_l1{ext}"
