@@ -197,6 +197,251 @@ import matplotlib.pyplot as plt
 #     return ks, C_full
 
 
+def get_sigma_covariance(
+    cosmo,
+    z,
+    theta1,
+    theta2,
+    filter_type="tophat",
+    f_sky=0.35,
+    A_survey_deg2=None,
+    use_ssc=True,
+    use_ng=True,
+    Lbox=505.0,
+):
+    """
+    Compute the (3*nz) × (3*nz) covariance matrix of the LDT variance projections
+    (σ₁₁, σ₂₂, σ₁₂) across redshift slices.
+
+    The output vector is ordered as:
+        s = [σ₁₁(z₀), σ₂₂(z₀), σ₁₂(z₀), σ₁₁(z₁), σ₂₂(z₁), σ₁₂(z₁), ...]
+
+    Three covariance components are included:
+
+    **Gaussian**: diagonal in k, block-diagonal in z (finite-volume cosmic variance)::
+
+        Cov_G[σ_ab(z), σ_cd(z')] = δ_{zz'} Σ_k 2 f_ab(k,z) f_cd(k,z) / N_modes(k)
+
+    **Non-Gaussian i-trispectrum** (Gualdi et al. 2021), block-diagonal in z::
+
+        Cov_NG[σ_ab(z), σ_cd(z')] = δ_{zz'} [Σ_k f_ab A_eff] [Σ_k f_cd A_eff] / V
+
+    **Super-sample covariance (SSC)**, rank-1 across *all* z-slices::
+
+        Cov_SSC[σ_ab(z), σ_cd(z')] = [Σ_k f_ab R₁(k,z)] [Σ_k f_cd R₁(k,z')] σ²_b
+
+    where ``f_ab(k,z) = (k/2π) W_a(kR_a) W_b(kR_b) dk`` with fiducial radii
+    R_a = χ(z) θ_a.
+
+    Parameters
+    ----------
+    cosmo : Cosmology_function
+        Provides ``cosmo.k`` (1/Mpc), ``cosmo.h``, ``cosmo.cosmoccl`` (pyccl),
+        and ``cosmo.get_nonlinear_pk(z, k)``.
+    z : array_like, shape (nz,)
+        Redshifts at which P(k) is evaluated (must be sorted ascending).
+    theta1, theta2 : float
+        Angular scales (radians) of the two LDT cells.
+    filter_type : {'tophat', 'starlet'}
+        Fourier-space window function type.
+    f_sky : float, optional
+        Survey sky fraction (default 0.35, roughly Euclid-like). Used for SSC
+        only when *A_survey_deg2* is None.
+    A_survey_deg2 : float or None, optional
+        Survey area in deg². Overrides *f_sky* when provided.
+    use_ssc : bool, optional
+        Include SSC component (default True).
+    use_ng : bool, optional
+        Include non-Gaussian i-trispectrum component (default True).
+    Lbox : float, optional
+        Simulation box side in Mpc/h for the Gaussian (shot-noise) term
+        (default 505.0, the SLICS box).
+
+    Returns
+    -------
+    s_mean : ndarray, shape (3*nz,)
+        Mean LDT variance projections at fiducial cosmology,
+        ``[σ₁₁(z₀), σ₂₂(z₀), σ₁₂(z₀), σ₁₁(z₁), ...]``.
+    C_sigma : ndarray, shape (3*nz, 3*nz)
+        Full covariance matrix of *s_mean*.
+    """
+    from .FilterFunctions import top_hat_filter_numpy, starlet_filter_numpy
+
+    z = np.asarray(z, dtype=float)
+    nz = len(z)
+    k = np.asarray(cosmo.k, dtype=float)
+
+    # Trapezoid weights on the k-grid
+    k_edges = np.concatenate([[k[0]], 0.5 * (k[:-1] + k[1:]), [k[-1]]])
+    dk = np.diff(k_edges)
+
+    # Gaussian term: simulation volume determines N_modes
+    vol = (Lbox / cosmo.h) ** 3  # Mpc³
+    Nmodes = vol / 3.0 / (2.0 * np.pi ** 2) * (
+        (k + dk / 2.0) ** 3 - (k - dk / 2.0) ** 3
+    )
+
+    # Comoving distances at each z
+    a_arr = 1.0 / (1.0 + z)
+    chi_arr = np.asarray(ccl.comoving_radial_distance(cosmo.cosmoccl, a_arr))
+
+    # SSC: σ²_b = variance of the matter density background over the survey volume
+    sigma2_b = 0.0
+    if use_ssc:
+        if A_survey_deg2 is not None:
+            A_survey_sr = float(A_survey_deg2) * (np.pi / 180.0) ** 2
+        else:
+            A_survey_sr = float(f_sky) * 4.0 * np.pi
+
+        chi_eff = float(np.mean(chi_arr))
+        Dchi = float(chi_arr[-1] - chi_arr[0]) if nz > 1 else 0.1 * chi_eff
+        V_survey = A_survey_sr * chi_eff ** 2 * Dchi  # Mpc³
+        R_survey = (3.0 * V_survey / (4.0 * np.pi)) ** (1.0 / 3.0)
+
+        a_eff = 1.0 / (1.0 + float(np.mean(z)))
+        P_lin_eff = np.asarray(ccl.linear_matter_power(cosmo.cosmoccl, k, a_eff))
+
+        # 3-D top-hat window W_3D(kR)
+        kR = k * R_survey
+        with np.errstate(divide="ignore", invalid="ignore"):
+            W_3D = 3.0 * (np.sin(kR) / kR ** 3 - np.cos(kR) / kR ** 2)
+        W_3D = np.where(kR < 1e-6, np.ones_like(kR), W_3D)
+        sigma2_b = float(np.trapezoid(k ** 2 * P_lin_eff * W_3D ** 2 / (2.0 * np.pi ** 2), k))
+
+    # Nonlinear P(k) at each z: shape (nz, nk)
+    Pnl = np.vstack([cosmo.get_nonlinear_pk(z_i, k) for z_i in z])
+
+    # Nonlinear growth response R₁(k,z) ≈ 26/21 + (1/3) d(ln P_nl)/d(ln k)
+    ln_k = np.log(k)
+    ln_Pnl = np.log(np.maximum(Pnl, 1e-300))
+    d_lnP_d_lnk = np.gradient(ln_Pnl, ln_k, axis=1)   # (nz, nk)
+    R1_response = 26.0 / 21.0 + (1.0 / 3.0) * d_lnP_d_lnk  # (nz, nk)
+
+    # Filter projections f_ab[i, m] = (k_m / 2π) W_a(k_m χ_i θ_a) W_b(k_m χ_i θ_b) dk_m
+    # Evaluated at fiducial δ = 0 → R_a = χ(z_i) θ_a.
+    nk = len(k)
+    f11 = np.empty((nz, nk))
+    f22 = np.empty((nz, nk))
+    f12 = np.empty((nz, nk))
+
+    for i in range(nz):
+        chi_i = float(chi_arr[i])
+        Ra = chi_i * theta1
+        Rb = chi_i * theta2
+        if filter_type == "tophat":
+            Wa = np.asarray(top_hat_filter_numpy(k, Ra))
+            Wb = np.asarray(top_hat_filter_numpy(k, Rb))
+        else:
+            Wa = np.asarray(starlet_filter_numpy(k, Ra))
+            Wb = np.asarray(starlet_filter_numpy(k, Rb))
+        bw = k * dk / (2.0 * np.pi)
+        f11[i] = bw * Wa ** 2
+        f22[i] = bw * Wb ** 2
+        f12[i] = bw * Wa * Wb
+
+    # Mean σ values: σ_ab(z_i) = Σ_k f_ab(k, z_i) P_nl(k, z_i)
+    sig11 = np.einsum("ik,ik->i", f11, Pnl)
+    sig22 = np.einsum("ik,ik->i", f22, Pnl)
+    sig12 = np.einsum("ik,ik->i", f12, Pnl)
+
+    s_mean = np.empty(3 * nz)
+    s_mean[0::3] = sig11
+    s_mean[1::3] = sig22
+    s_mean[2::3] = sig12
+
+    # F[i, c, m]: c=0 → f11, c=1 → f22, c=2 → f12
+    F = np.stack([f11, f22, f12], axis=1)  # (nz, 3, nk)
+
+    C_sigma = np.zeros((3 * nz, 3 * nz))
+
+    # --- Gaussian (block-diagonal in z) ---
+    for i in range(nz):
+        for ca in range(3):
+            for cb in range(ca, 3):
+                val = 2.0 * float(np.dot(F[i, ca] * F[i, cb], 1.0 / Nmodes))
+                C_sigma[3 * i + ca, 3 * i + cb] += val
+                if ca != cb:
+                    C_sigma[3 * i + cb, 3 * i + ca] += val
+
+    # --- Non-Gaussian i-trispectrum (block-diagonal in z) ---
+    if use_ng:
+        def _A_eff(k_):
+            return 35.0 * (k_ / 0.1) ** 0.87 * (1.0 + (k_ / 1.0) ** 1.94) ** (-2.11)
+
+        A = _A_eff(k)
+        for i in range(nz):
+            v = F[i] @ A  # (3,): v[c] = Σ_m F[i,c,m] A_eff(k_m)
+            C_sigma[3 * i : 3 * i + 3, 3 * i : 3 * i + 3] += np.outer(v, v) / vol
+
+    # --- SSC (rank-1 across all z-slices) ---
+    if use_ssc:
+        # g[i, c] = Σ_k f_c(k, z_i) R₁(k, z_i)
+        g = np.einsum("icm,im->ic", F, R1_response)  # (nz, 3)
+        g_flat = g.reshape(-1)                         # (3*nz,)
+        C_sigma += sigma2_b * np.outer(g_flat, g_flat)
+
+    return s_mean, C_sigma
+
+
+def sample_sigma_as_pk(cosmo, z, s_mean, C_sigma, n_samples=100, seed=None):
+    """
+    Draw realizations from the σ-space covariance and return them as P(k) dicts.
+
+    Each σ-space sample is mapped to a P(k) realization via a per-z amplitude
+    rescaling::
+
+        P_sample(k, z_i) = P_fid(k, z_i) × (σ₁₁_sample(z_i) / σ₁₁_fid(z_i))
+
+    This is exact for SSC-type fluctuations (δP ∝ P_fid) and captures the
+    dominant z-correlated variability mode efficiently. The output format is
+    identical to ``get_covariance(..., variability=True)``.
+
+    Parameters
+    ----------
+    cosmo : Cosmology_function
+    z : array_like, shape (nz,)
+    s_mean : ndarray, shape (3*nz,)
+        From :func:`get_sigma_covariance`.
+    C_sigma : ndarray, shape (3*nz, 3*nz)
+        From :func:`get_sigma_covariance`.
+    n_samples : int, optional
+        Number of P(k) realizations (default 100).
+    seed : int or None, optional
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    pk_samples_list : list of dict
+        Length *n_samples*. Each dict maps ``z_i`` (float) → P(k) ndarray,
+        same format as ``get_covariance`` with ``variability=True``.
+    pk_dict : dict
+        Fiducial mean P(k) at each z.
+    """
+    rng = np.random.default_rng(seed)
+    z = np.asarray(z, dtype=float)
+    nz = len(z)
+    k = np.asarray(cosmo.k, dtype=float)
+
+    Pnl = np.vstack([cosmo.get_nonlinear_pk(z_i, k) for z_i in z])  # (nz, nk)
+    pk_dict = {float(z_i): Pnl[i] for i, z_i in enumerate(z)}
+
+    # Regularize for numerical stability
+    jitter = 1e-10 * np.trace(C_sigma) / max(3 * nz, 1) * np.eye(3 * nz)
+    s_samples = rng.multivariate_normal(s_mean, C_sigma + jitter, size=n_samples)
+
+    sig11_fid = s_mean[0::3]  # (nz,) reference amplitude per z-slice
+    safe_fid = np.where(sig11_fid > 0, sig11_fid, 1e-300)
+
+    pk_samples_list = []
+    for n in range(n_samples):
+        sig11_n = s_samples[n, 0::3]  # (nz,)
+        alpha = np.clip(sig11_n / safe_fid, 0.01, 100.0)
+        pk_n = {float(z[i]): Pnl[i] * alpha[i] for i in range(nz)}
+        pk_samples_list.append(pk_n)
+
+    return pk_samples_list, pk_dict
+
+
 def get_covariance(cosmo, z, variability, numberofrealisations):
     """
     Compute the nonlinear matter power spectrum P(k) and optionally its covariance
