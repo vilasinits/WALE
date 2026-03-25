@@ -1,4 +1,4 @@
-name: wale_env
+name: wale
 channels:
   - conda-forge
   - defaults
@@ -18,18 +18,18 @@ dependencies:
   - sphinx-autodoc-typehints
   - sphinx_rtd_theme
   - pyccl
-  - matplotlib-base
   - mpmath
   - jax
   - pytest
+  - pytest-cov
   - distinctipy
-  - ipykernel
   - camb
   - numba
-  - distinctipy
-  - classy
-  - fast-pt
-  - job-lib
   - scikit-image
+  - joblib
+  - astropy
+  - black
   - pip:
       - tqdm
+      - classy
+      - fast-pt

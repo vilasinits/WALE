@@ -228,18 +228,16 @@ def get_covariance(cosmo, z, variability, numberofrealisations):
         pk_dict : dict
             Dictionary mapping redshift z to the mean nonlinear P(k).
     """
-    Lbox = 505  # Mpc/h
+    # SLICS box is 505 Mpc/h; cosmo.k is in Mpc⁻¹, so convert to Mpc.
+    Lbox = 505.0 / cosmo.h  # Mpc  (505 Mpc/h → Mpc for consistent mode counting)
     vol = Lbox**3
     k = cosmo.k
-    dk = cosmo.dk
     Nk = len(k)
 
-    Nmodes = (
-        vol
-        / 3
-        / (2 * np.pi**2)
-        * ((k + dk / 2) ** 3 - (k - dk / 2) ** 3)
-    )
+    # Shell widths for the (now log-spaced) k grid: use centre-to-centre differences.
+    k_edges = np.concatenate([[k[0]], 0.5 * (k[:-1] + k[1:]), [k[-1]]])
+    dk_shells = np.diff(k_edges)
+    Nmodes = vol / 3 / (2 * np.pi**2) * ((k + dk_shells / 2) ** 3 - (k - dk_shells / 2) ** 3)
 
     scale_factors = 1.0 / (1.0 + z)
     idx = np.argsort(scale_factors)

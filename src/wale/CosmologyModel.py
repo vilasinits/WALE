@@ -99,8 +99,12 @@ class Cosmology_function:
         self.kmin = kwargs.get("kmin", 1e-4)
         self.kmax = kwargs.get("kmax", 10.0)
         self.dk = kwargs.get("dk", 0.1)
-        self.k = np.arange(self.kmin, self.kmax, self.dk)
-        self.nk = len(self.k)
+        # Log-spaced k grid: the integrand k·P(k)·W²(kR) spans orders of magnitude,
+        # so log-spacing gives far better quadrature accuracy than uniform spacing.
+        # nk_per_decade=100 gives ~300 points over [1e-4, 10] Mpc⁻¹ — adjust as needed.
+        nk_per_decade = kwargs.get("nk_per_decade", 100)
+        self.nk = max(10, int(nk_per_decade * np.log10(self.kmax / self.kmin)))
+        self.k = np.logspace(np.log10(self.kmin), np.log10(self.kmax), self.nk)
 
     def _E(self, z):
         """

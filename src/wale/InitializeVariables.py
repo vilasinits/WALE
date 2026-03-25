@@ -52,8 +52,8 @@ class InitialiseVariables:
 
         # Angular scales in radians
         self.theta1_radian = theta1 * u.arcmin.to(u.radian)
-        self.theta2_radian = 2.0 * self.theta1_radian
-
+        self.theta2_radian = 2. * self.theta1_radian
+        print("the angles are: ", self.theta1_radian, " and ", self.theta2_radian)
         # Number of lens planes
         self.nplanes = nplanes
 
