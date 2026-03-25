@@ -75,16 +75,16 @@ def get_moments(kappa_values, pdf_values):
     norm : float
         Normalization constant of the input PDF.
     """
-    norm = np.trapz(pdf_values, kappa_values)
+    norm = np.trapezoid(pdf_values, kappa_values)
     normalized_pdf_values = pdf_values / norm
-    mean_kappa = np.trapz(kappa_values * normalized_pdf_values, kappa_values)
-    variance = np.trapz(
+    mean_kappa = np.trapezoid(kappa_values * normalized_pdf_values, kappa_values)
+    variance = np.trapezoid(
         (kappa_values - mean_kappa) ** 2 * normalized_pdf_values, kappa_values
     )
-    third_moment = np.trapz(
+    third_moment = np.trapezoid(
         (kappa_values - mean_kappa) ** 3 * normalized_pdf_values, kappa_values
     )
-    fourth_moment = np.trapz(
+    fourth_moment = np.trapezoid(
         (kappa_values - mean_kappa) ** 4 * normalized_pdf_values, kappa_values
     )
     S_3 = third_moment / (variance**2.0)
