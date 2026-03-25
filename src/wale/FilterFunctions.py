@@ -1,64 +1,141 @@
-# from imports import *
+import math as _math
 import numpy as np
-from scipy import special as sp
+import jax
+import jax.numpy as jnp
 from functools import lru_cache
 import mpmath as mp
 
+jax.config.update("jax_enable_x64", True)
+
+# ---------------------------------------------------------------------------
+# Pure-JAX Bessel J0 and J1 via power series + asymptotic expansion.
+#
+# Replacing jax.pure_callback (which requires a host–device round-trip on
+# every call) with a polynomial evaluation that runs entirely in XLA.
+#
+# Power series (accurate for |x| ≤ 12, 28 terms):
+#   J0(x) = Σ  (-1)^m / (m!)^2   * (x/2)^(2m)
+#   J1(x) = Σ  (-1)^m / (m!(m+1)!) * (x/2)^(2m+1)
+#
+# Asymptotic (|x| > 12, two-term):
+#   J0(x) ≈ sqrt(2/(πx)) cos(x − π/4)
+#   J1(x) ≈ sqrt(2/(πx)) [cos(x−3π/4)(1−15/(128x²)) − sin(x−3π/4) 3/(8x)]
+# ---------------------------------------------------------------------------
+
+_N_BESSEL = 28  # terms; accurate to ~1e-15 for |x| ≤ 12
+
+_J0_COEFFS = jnp.array(
+    [(-1.0) ** m / float(_math.factorial(m)) ** 2 for m in range(_N_BESSEL)],
+    dtype=jnp.float64,
+)
+_J1_COEFFS = jnp.array(
+    [(-1.0) ** m / (float(_math.factorial(m)) * float(_math.factorial(m + 1)))
+     for m in range(_N_BESSEL)],
+    dtype=jnp.float64,
+)
+
+# Same coefficients as plain numpy arrays (for the scalar numpy path)
+_J0_COEFFS_NP = np.array(
+    [(-1.0) ** m / float(_math.factorial(m)) ** 2 for m in range(_N_BESSEL)]
+)
+_J1_COEFFS_NP = np.array(
+    [(-1.0) ** m / (float(_math.factorial(m)) * float(_math.factorial(m + 1)))
+     for m in range(_N_BESSEL)]
+)
+
+
+def _j0(x):
+    """
+    J0(x) — pure JAX, no host callbacks.
+    Power series for |x| ≤ 12; leading asymptotic for |x| > 12.
+    JAX auto-differentiates through both branches.
+    """
+    absx = jnp.abs(x)
+    t = absx * absx * 0.25  # (x/2)^2
+
+    # Horner evaluation of Σ c_m * t^m (unrolled by JIT)
+    p = _J0_COEFFS[-1]
+    for c in _J0_COEFFS[-2::-1]:
+        p = p * t + c
+
+    safe = jnp.where(absx < 1e-30, jnp.ones_like(absx), absx)
+    asym = jnp.sqrt(2.0 / (jnp.pi * safe)) * jnp.cos(safe - jnp.pi / 4.0)
+    return jnp.where(absx < 1e-30, jnp.ones_like(x), jnp.where(absx <= 12.0, p, asym))
+
+
+def _j1(x):
+    """
+    J1(x) — pure JAX, no host callbacks.
+    Power series for |x| ≤ 12; two-term asymptotic for |x| > 12.
+    """
+    absx = jnp.abs(x)
+    t = absx * absx * 0.25
+
+    p = _J1_COEFFS[-1]
+    for c in _J1_COEFFS[-2::-1]:
+        p = p * t + c
+    poly_val = (absx * 0.5) * p
+
+    safe = jnp.where(absx < 1e-30, jnp.ones_like(absx), absx)
+    asym = jnp.sqrt(2.0 / (jnp.pi * safe)) * (
+        jnp.cos(safe - 0.75 * jnp.pi) * (1.0 - 15.0 / (128.0 * safe ** 2))
+        - jnp.sin(safe - 0.75 * jnp.pi) * (3.0 / (8.0 * safe))
+    )
+    result = jnp.where(absx <= 12.0, poly_val, asym)
+    return jnp.where(absx < 1e-30, jnp.zeros_like(x), result * jnp.sign(x))
+
+
+# ---------------------------------------------------------------------------
+# Numpy scalar versions (used in VarianceCalculator's fast scalar path)
+# ---------------------------------------------------------------------------
+
+def _j1_numpy(x):
+    """Numpy J1 via the same polynomial — no scipy dependency."""
+    absx = np.abs(x)
+    t = absx * absx * 0.25
+    p = np.polyval(_J1_COEFFS_NP[::-1], t)   # uses numpy.polyval
+    # Actually, let's use Horner manually for consistency:
+    p2 = _J1_COEFFS_NP[-1]
+    for c in _J1_COEFFS_NP[-2::-1]:
+        p2 = p2 * t + c
+    poly_val = (absx * 0.5) * p2
+    # asymptotic for large x
+    safe = np.where(absx < 1e-30, 1.0, absx)
+    asym = np.sqrt(2.0 / (np.pi * safe)) * (
+        np.cos(safe - 0.75 * np.pi) * (1.0 - 15.0 / (128.0 * safe ** 2))
+        - np.sin(safe - 0.75 * np.pi) * (3.0 / (8.0 * safe))
+    )
+    result = np.where(absx <= 12.0, poly_val, asym)
+    return np.where(absx < 1e-30, 0.0, result * np.sign(x))
+
+
+# ---------------------------------------------------------------------------
+# Filter window functions (JAX)
+# ---------------------------------------------------------------------------
 
 def top_hat_filter(k, R):
-    """
-    Calculates the top-hat window function for a given radius.
+    """Top-hat filter W(kR) = 2 J1(kR) / (kR). Safe at kR → 0."""
+    kR = k * R
+    safe_kR = jnp.where(jnp.abs(kR) < 1e-30, jnp.ones_like(kR), kR)
+    return jnp.where(jnp.abs(kR) < 1e-30, jnp.ones_like(kR), 2.0 * _j1(safe_kR) / safe_kR)
 
-    Parameters:
-        R (float or numpy.ndarray): The scale (or array of scales) at which to calculate the window function.
 
-    Returns:
-        numpy.ndarray: The top-hat window function values at the given scale(s).
-    """
-    return 2.0 * sp.j1(k * R) / (k * R)
-
-def get_W2D_FL(window_radius, map_shape, filter_type, **kwargs):
-    """
-    Constructs a 2D Fourier-space window function for a top-hat filter.
-
-    Parameters:
-        window_radius : float
-            The top-hat window radius in physical units (must be consistent with L).
-        map_shape     : tuple
-            Shape of the map (assumed square, e.g. (600,600)).
-        L             : float, optional
-            Physical size of the map (default is 505, as used for SLICS).
-
-    Returns:
-        2D numpy array representing the Fourier-space window.
-    """
-    N = map_shape[0]
-    if kwargs.get("L") is not None:
-        L = kwargs["L"]
-    else:
-        L = 505.0  # Default value, e.g., for SLICS
-        
-    dx = N / N
-    # Generate Fourier frequencies.
-    kx = np.fft.fftshift(np.fft.fftfreq(N, dx))
-    ky = np.fft.fftshift(np.fft.fftfreq(N, dx))
-    kx, ky = np.meshgrid(kx, ky, indexing="ij")
-    k2 = kx**2 + ky**2
-    # Convert to radial wavenumber (with 2pi factor).
-    k = 2 * np.pi * np.sqrt(k2)
-    # Avoid division by zero at the center.
-    ind = int(N / 2)
-    k[ind, ind] = 1e-7
-    if filter_type == "tophat":
-        return top_hat_filter(k, window_radius)
-    elif filter_type == "starlet":
-        # print("Getting starlet W2D_FL")
-        return starlet_filter(k, window_radius)
-        # return uHat_starlet_analytical(k, window_radius)
+def top_hat_filter_numpy(k, R):
+    """Numpy version of top-hat filter — for fast scalar path."""
+    kR = k * R
+    safe_kR = np.where(np.abs(kR) < 1e-30, np.ones_like(kR), kR)
+    return np.where(np.abs(kR) < 1e-30, np.ones_like(kR), 2.0 * _j1_numpy(safe_kR) / safe_kR)
 
 
 def b3_1D_ft(x):
-    return (np.sin(x / 2) / (x / 2)) ** 4.0
+    """B3-spline 1D Fourier factor sin(x/2)/(x/2). Safe at x=0 (limit = 1)."""
+    safe_x = jnp.where(jnp.abs(x) < 1e-30, jnp.ones_like(x), x)
+    sinc_val = jnp.where(
+        jnp.abs(x) < 1e-30,
+        jnp.ones_like(x),
+        jnp.sin(safe_x / 2.0) / (safe_x / 2.0),
+    )
+    return sinc_val ** 4.0
 
 
 def b3_2D_ft(x, y):
@@ -66,107 +143,89 @@ def b3_2D_ft(x, y):
 
 
 def starlet_filter(k, R):
-    """
-    Computes the Fourier-space starlet filter.
-
-    Args:
-        k (np.ndarray): 2D array of Fourier frequencies.
-        R (float): The scale at which to compute the filter.
-
-    Returns:
-        np.ndarray: The computed starlet filter in Fourier space.
-    """
-    # Calculate the radial frequency
-    # k_radial = np.sqrt(k**2)
-    # Compute the starlet filter
+    """Isotropic starlet (B3-spline) filter in Fourier space."""
     return b3_2D_ft(k * R, k * R)
 
 
-# Fast memoized scalar S function
+def starlet_filter_numpy(k, R):
+    """Numpy version of starlet filter — for fast scalar path."""
+    kR = k * R
+    with np.errstate(divide='ignore', invalid='ignore'):
+        s = np.where(np.abs(kR / 2) < 1e-30, 1.0, np.sin(kR / 2) / (kR / 2))
+    return (s ** 4) ** 2  # b3_1D_ft(kR)^2
+
+
+def get_W2D_FL(window_radius, map_shape, filter_type, **kwargs):
+    """2D Fourier-space window function for a square map."""
+    N = map_shape[0]
+    dx = N / N
+    kx = np.fft.fftshift(np.fft.fftfreq(N, dx))
+    ky = np.fft.fftshift(np.fft.fftfreq(N, dx))
+    kx, ky = np.meshgrid(kx, ky, indexing="ij")
+    k2 = kx ** 2 + ky ** 2
+    k_grid = jnp.asarray(2.0 * np.pi * np.sqrt(k2))
+    ind = int(N / 2)
+    k_grid = k_grid.at[ind, ind].set(1e-7)
+    if filter_type == "tophat":
+        return top_hat_filter(k_grid, window_radius)
+    elif filter_type == "starlet":
+        return starlet_filter(k_grid, window_radius)
+
+
+# ---------------------------------------------------------------------------
+# Analytical Hankel transform utilities (mpmath/numpy — NOT in hot path).
+# ---------------------------------------------------------------------------
+
 @lru_cache(maxsize=None)
 def S_scalar(n: int, b: float) -> float:
+    from scipy import special as sp
     if n < -1:
         raise ValueError("n cannot be smaller than -1.")
-
     J0 = sp.j0(b)
     J1 = sp.j1(b)
-
     if n == 0:
         return b * J1
     elif n == -1:
-        return b * float(mp.hyp1f2(0.5, 1, 1.5, -(b**2) / 4))
+        return b * float(mp.hyp1f2(0.5, 1, 1.5, -(b ** 2) / 4))
     else:
-        return b ** (n + 1) * J1 + n * b**n * J0 - n**2 * S_scalar(n - 2, b)
+        return b ** (n + 1) * J1 + n * b ** n * J0 - n ** 2 * S_scalar(n - 2, b)
 
 
-# Wrapper to handle arrays
 def S(n: int, b):
     b = np.asarray(b)
     if b.ndim == 0:
         return S_scalar(n, float(b))
-    else:
-        vec_func = np.vectorize(lambda x: S_scalar(n, float(x)))
-        return vec_func(b)
+    return np.vectorize(lambda x: S_scalar(n, float(x)))(b)
 
 
-# Fast uHat_starlet_analytical
 def uHat_starlet_analytical(eta, R):
-    """
-    Computes the analytical Hankel transform of the starlet U-filter.
-
-    Args:
-        eta (np.ndarray or float): Dimensionless argument \( \hat{u} \).
-
-    Returns:
-        float or np.ndarray: Computed \( \hat{u} \).
-    """
-    # print("Calculating uHat_starlet_analytical (optimized version)")
-
+    """Analytical Hankel transform of the starlet U-filter (mpmath, not JAX)."""
     eta = np.asarray(eta) * R
-    eta_safe = np.clip(eta, 2e-2, 100)  # Stability for small eta
-
-    # Precompute all needed S values
+    eta_safe = np.clip(eta, 2e-2, 100)
     b_half = 0.5 * eta_safe
     b_one = eta_safe
     b_two = 2.0 * eta_safe
 
-    S0_half = S(0, b_half)
-    S1_half = S(1, b_half)
-    S2_half = S(2, b_half)
-    S3_half = S(3, b_half)
-
-    S0_one = S(0, b_one)
-    S1_one = S(1, b_one)
-    S2_one = S(2, b_one)
-    S3_one = S(3, b_one)
-
-    S0_two = S(0, b_two)
-    S1_two = S(1, b_two)
-    S2_two = S(2, b_two)
-    S3_two = S(3, b_two)
-
-    # Compute factors
     factor1 = (
-        0.125 * eta_safe**3 * S0_half
-        - 0.75 * eta_safe**2 * S1_half
-        + 1.5 * eta_safe * S2_half
-        - S3_half
+        0.125 * eta_safe ** 3 * S(0, b_half)
+        - 0.75 * eta_safe ** 2 * S(1, b_half)
+        + 1.5 * eta_safe * S(2, b_half)
+        - S(3, b_half)
     )
-    # print("done factor1")
     factor2 = (
-        eta_safe**3 * S0_one - 3 * eta_safe**2 * S1_one + 3 * eta_safe * S2_one - S3_one
+        eta_safe ** 3 * S(0, b_one)
+        - 3 * eta_safe ** 2 * S(1, b_one)
+        + 3 * eta_safe * S(2, b_one)
+        - S(3, b_one)
     )
-    # print("done factor2")
     factor3 = (
-        8 * eta_safe**3 * S0_two
-        - 12 * eta_safe**2 * S1_two
-        + 6 * eta_safe * S2_two
-        - S3_two
+        8 * eta_safe ** 3 * S(0, b_two)
+        - 12 * eta_safe ** 2 * S(1, b_two)
+        + 6 * eta_safe * S(2, b_two)
+        - S(3, b_two)
     )
-    # print("done factor3")
-    # Final result
-    result = (
-        (2 * np.pi) * (-128 / 9 * factor1 + 4 * factor2 - 1 / 9 * factor3) / eta_safe**5
+    return (
+        (2 * np.pi)
+        * (-128 / 9 * factor1 + 4 * factor2 - 1 / 9 * factor3)
+        / eta_safe ** 5
     )
-
-    return result

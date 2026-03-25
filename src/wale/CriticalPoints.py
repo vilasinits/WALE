@@ -1,88 +1,7 @@
-# import numpy as np
-# import matplotlib.pyplot as plt
-# from scipy.interpolate import CubicSpline, UnivariateSpline
-
-# from .RateFunction import (
-#     get_psi_2cell,
-#     get_psi_derivative_delta1,
-#     get_psi_derivative_delta2,
-# )
-
-
-# # --- Fast stencil (Hessian) computations ---
-# def det_hessian(psi, dx, dy):
-#     # Central differences
-#     Dxx = np.array([[0, 0, 0],
-#                     [1, -2, 1],
-#                     [0, 0, 0]]) / dx**2
-#     Dyy = np.array([[0, 1, 0],
-#                     [0, -2, 0],
-#                     [0, 1, 0]]) / dy**2
-#     Dxy = np.array([[1, 0, -1],
-#                     [0, 0, 0],
-#                     [-1, 0, 1]]) / (4*dx*dy)
-#     psi_xx = fftconvolve(psi, Dxx, mode="same")
-#     psi_yy = fftconvolve(psi, Dyy, mode="same")
-#     psi_xy = fftconvolve(psi, Dxy, mode="same")
-#     return psi_xx * psi_yy - psi_xy * psi_xy
-
-# # --- Main fast grid/contour/critical-point pipeline ---
-# def find_critical_points_single(
-#     variables, variance, lw, z, chi_value,
-#     ngrid=100, deld=1e-5, contour_level=0.0, plot=True
-# ):
-#     d1_vals = np.linspace(-0.99, 1.99, ngrid)
-#     d2_vals = np.linspace(-0.99, 1.99, ngrid)
-#     D1, D2 = np.meshgrid(d1_vals, d2_vals, indexing='ij')
-#     dx = d1_vals[1] - d1_vals[0]
-#     dy = d2_vals[1] - d2_vals[0]
-
-#     # Compute ψ on full grid
-#     psi = get_psi_2cell(
-#         variance, chi_value, variables.recal_value, z, D1, D2,
-#         variables.theta1_radian, variables.theta2_radian
-#     )
-
-#     # Compute determinant of Hessian
-#     detH = det_hessian(psi, dx, dy)
-
-#     # Extract contours of det(H)=0
-#     paths = find_contours(detH, contour_level)
-#     crit_pts = []
-#     for path in paths:
-#         # Interpolate indices to (d1, d2) space
-#         d1_path = np.interp(path[:, 0], np.arange(ngrid), d1_vals)
-#         d2_path = np.interp(path[:, 1], np.arange(ngrid), d2_vals)
-#         for d1, d2 in zip(d1_path, d2_path):
-#             deriv_sum = (
-#                 get_psi_derivative_delta1(
-#                     deld, variance, chi_value, variables.recal_value, z, d1, d2,
-#                     variables.theta1_radian, variables.theta2_radian
-#                 )
-#                 +
-#                 get_psi_derivative_delta2(
-#                     deld, variance, chi_value, variables.recal_value, z, d1, d2,
-#                     variables.theta1_radian, variables.theta2_radian
-#                 )
-#             ) * variables.cosmo.h / lw
-#             if np.abs(deriv_sum) < 1e-2:  # For demo; use proper root-finding as needed
-#                 crit_pts.append((d1, d2))
-#     crit_pts = np.array(crit_pts)
-
-#     if plot:
-#         plt.figure(figsize=(8, 8))
-#         plt.contour(D1, D2, detH, levels=[contour_level], colors='b')
-#         if crit_pts.size:
-#             plt.scatter(crit_pts[:, 0], crit_pts[:, 1], c='r', s=10, label='critical pts')
-#         plt.xlabel(r'$\delta_1$')
-#         plt.ylabel(r'$\delta_2$')
-#         plt.legend()
-#         plt.title("Critical points: all physical parameters injected")
-#         plt.show()
-#     return crit_pts
-
-
+import functools
 import numpy as np
+import jax
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 
@@ -90,8 +9,6 @@ from scipy.ndimage import convolve, gaussian_filter
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq
 
-# Optional: parallelization; code runs without joblib too
-# at module top
 try:
     from joblib import Parallel, delayed
     _HAVE_JOBLIB = True
@@ -100,12 +17,44 @@ except Exception:
     delayed = None
     _HAVE_JOBLIB = False
 
-
 from .RateFunction import (
+    get_tau,
     get_psi_2cell,
     get_psi_derivative_delta1,
     get_psi_derivative_delta2,
 )
+from .FilterFunctions import top_hat_filter, starlet_filter
+from .VarianceCalculator import _simpson_jax
+
+
+@functools.partial(jax.jit, static_argnums=(6,))
+def _psi_grid_jit(k, bw, R1_arr, R2_arr, tau1, tau2, filter_type, recal_value):
+    """
+    JIT-compiled ψ(δ₁, δ₂) grid.
+
+    bw = k · P(k) · simpson_weights / (2π), pre-computed per (z, pk).
+    Uses matmul for sig12 to avoid allocating a (ngrid, ngrid, nk) array.
+    Compiled once per filter_type; all z-slice calls reuse the same XLA graph.
+    """
+    if filter_type == "tophat":
+        W1 = top_hat_filter(k[None, :], R1_arr[:, None])   # (ngrid, nk)
+        W2 = top_hat_filter(k[None, :], R2_arr[:, None])
+    else:
+        W1 = starlet_filter(k[None, :], R1_arr[:, None])
+        W2 = starlet_filter(k[None, :], R2_arr[:, None])
+
+    sig11 = jnp.sum(W1 ** 2 * bw[None, :], axis=-1)        # (ngrid,)
+    sig22 = jnp.sum(W2 ** 2 * bw[None, :], axis=-1)        # (ngrid,)
+    sig12 = (W1 * bw[None, :]) @ W2.T                       # (ngrid, ngrid) via BLAS
+
+    S11 = sig11[:, None]
+    S22 = sig22[None, :]
+    det = S11 * S22 - sig12 ** 2
+    psi = (
+        (S11 * tau2 ** 2 - 2.0 * sig12 * tau1 * tau2 + S22 * tau1 ** 2)
+        * recal_value / (det * 2.0)
+    )
+    return psi
 
 
 class CriticalPointsFinder:
@@ -163,33 +112,30 @@ class CriticalPointsFinder:
                               [ 0, 0, 0],
                               [-1, 0, 1]], dtype=float) / (4*self.dx*self.dy)
 
+        # Pre-compute τ grids — fixed for this finder (same δ grid for every z-slice)
+        self._tau1 = jnp.asarray(get_tau(1.0 + self.D1))  # (ngrid, ngrid)
+        self._tau2 = jnp.asarray(get_tau(1.0 + self.D2))
+
     # ---------- core numeric helpers ----------
 
     def _psi_grid(self, variance, chi_value, z):
         """
-        Evaluate ψ(d1,d2) on the whole grid in one go if broadcasting is supported;
-        otherwise fall back to a fast loop.
+        Evaluate ψ(δ₁, δ₂) on the full (ngrid × ngrid) grid via _psi_grid_jit.
         """
-        try:
-            # Many NumPy-aware functions will broadcast over arrays directly
-            psi = get_psi_2cell(
-                variance, chi_value, self.recal_value, z,
-                self.D1, self.D2, self.theta1, self.theta2
-            )
-            psi = np.asarray(psi, dtype=float)
-            if psi.shape != self.D1.shape:
-                raise ValueError("Broadcasted shape mismatch for get_psi_2cell.")
-            return psi
-        except Exception:
-            # Fallback loop (still in C via ndindex + direct writes; faster than np.vectorize)
-            psi = np.empty_like(self.D1, dtype=float)
-            it = np.ndindex(self.D1.shape)
-            for i, j in it:
-                psi[i, j] = float(get_psi_2cell(
-                    variance, chi_value, self.recal_value, z,
-                    self.D1[i, j], self.D2[i, j], self.theta1, self.theta2
-                ))
-            return psi
+        k  = variance._k_jax
+        bw = variance._bw_jax[z]        # pre-computed k·P(k)·w_simp/(2π)
+        R1_arr = jnp.asarray(
+            chi_value * np.sqrt(np.maximum(1.0 + self.delta1_vals, 0.01)) * self.theta1
+        )
+        R2_arr = jnp.asarray(
+            chi_value * np.sqrt(np.maximum(1.0 + self.delta2_vals, 0.01)) * self.theta2
+        )
+        psi = _psi_grid_jit(
+            k, bw, R1_arr, R2_arr,
+            self._tau1, self._tau2,
+            variance.filter_type, self.recal_value,
+        )
+        return np.asarray(psi, dtype=float)
 
     def _det_hessian(self, psi):
         """Compute det(Hψ) via convolution stencils."""
@@ -247,7 +193,9 @@ class CriticalPointsFinder:
         dpsi_d2 = get_psi_derivative_delta2(
             deld, variance, chi_value, self.recal_value, z, d1, d2, self.theta1, self.theta2
         )
-        return (dpsi_d1 + dpsi_d2) * 1 / lw  #self.h / lw                                   ##################### removed h
+        # .item() extracts a Python float from a 0-d or single-element array,
+        # which is required for NumPy 2.x (float() no longer accepts 1-D arrays).
+        return np.asarray(dpsi_d1 + dpsi_d2).flat[0] / lw
 
     def _roots_along_path(
         self,
@@ -256,7 +204,7 @@ class CriticalPointsFinder:
         lw,
         z,
         chi_value,
-        n_samples=256,
+        n_samples=100,
         flip_sign=True,
         return_mode="derivative",
         deld=1e-6,
@@ -298,8 +246,8 @@ class CriticalPointsFinder:
             d2 = float(fy(tt))
             val = get_psi_derivative_delta1(
                 deld, variance, chi_value, self.recal_value, z, d1, d2, self.theta1, self.theta2
-            ) * 1 / lw   #self.h / lw                               ##################### removed h                         
-            return float(val)
+            ) * 1 / lw
+            return np.asarray(val).flat[0]
 
         # sample g
         gvals = np.empty_like(ts, dtype=float)
@@ -423,9 +371,9 @@ def find_critical_points_for_cosmo(
     min_z=1,
     max_z=4,
     smooth_sigma=0.0,
-    parallel=True,
+    parallel=False,
     n_jobs=-1,
-    return_mode="derivative", 
+    return_mode="derivative",
 ):
     """
     High-level driver that returns (smallest_positive, largest_negative)

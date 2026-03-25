@@ -1,97 +1,159 @@
+import functools
 import numpy as np
-from scipy.integrate import simpson
-import pyccl as ccl
-from .FilterFunctions import top_hat_filter, starlet_filter
+import jax
+import jax.numpy as jnp
 
+jax.config.update("jax_enable_x64", True)
+
+from .FilterFunctions import top_hat_filter, starlet_filter, top_hat_filter_numpy, starlet_filter_numpy
+
+
+# ---------------------------------------------------------------------------
+# Simpson weights pre-computation (numpy, once per k-grid)
+# ---------------------------------------------------------------------------
+
+def _simpson_weights_numpy(x):
+    """
+    Non-uniform composite Simpson weights for grid x (numpy, not JAX).
+    Integral ≈ sum(w * f).  Called once at Variance construction.
+    """
+    n = len(x)
+    h = np.diff(x)
+    w = np.zeros(n)
+    n_pairs = (n - 1) // 2
+    for i in range(n_pairs):
+        h0, h1 = h[2 * i], h[2 * i + 1]
+        c = (h0 + h1) / 6.0
+        w[2 * i]     += c * (2.0 - h1 / h0)
+        w[2 * i + 1] += c * (h0 + h1) ** 2 / (h0 * h1)
+        w[2 * i + 2] += c * (2.0 - h0 / h1)
+    if n % 2 == 0:          # leftover trapezoidal interval
+        w[-2] += 0.5 * h[-1]
+        w[-1] += 0.5 * h[-1]
+    return w
+
+
+# ---------------------------------------------------------------------------
+# _simpson_jax: kept for ComputePDF (still used there)
+# ---------------------------------------------------------------------------
+
+def _simpson_jax(y, x):
+    """
+    Non-uniform composite Simpson's rule, integrating over the last axis.
+    Works for 1D (n,), 2D (m, n) and 3D (m, p, n) inputs.
+    """
+    n = y.shape[-1]
+    h = jnp.diff(x)
+
+    if n < 2:
+        return jnp.zeros(y.shape[:-1])
+    if n == 2:
+        return 0.5 * h[0] * (y[..., 0] + y[..., 1])
+
+    n_pairs = (n - 1) // 2
+    h0 = h[0::2][:n_pairs]
+    h1 = h[1::2][:n_pairs]
+    y0 = y[..., 0 : 2 * n_pairs : 2]
+    y1 = y[..., 1 : 2 * n_pairs + 1 : 2]
+    y2 = y[..., 2 : 2 * n_pairs + 2 : 2]
+
+    result = jnp.sum(
+        (h0 + h1) / 6.0
+        * (
+            y0 * (2.0 - h1 / h0)
+            + y1 * (h0 + h1) ** 2 / (h0 * h1)
+            + y2 * (2.0 - h0 / h1)
+        ),
+        axis=-1,
+    )
+    if n % 2 == 0:
+        result = result + 0.5 * h[-1] * (y[..., -2] + y[..., -1])
+    return result
+
+
+# ---------------------------------------------------------------------------
+# JIT-compiled σ² — uses pre-computed base weights, just a dot product
+# ---------------------------------------------------------------------------
+
+@functools.partial(jax.jit, static_argnums=(2,))
+def _sigma2_jit(k, bw, filter_type, R1, R2):
+    """
+    σ²(R₁, R₂) = sum(W(kR₁) · W(kR₂) · bw)
+
+    bw = k · P(k) · simpson_weights / (2π), pre-computed per (z, pk).
+    Compiled once per filter_type; all subsequent calls are a single XLA op.
+    """
+    if filter_type == "tophat":
+        w1 = top_hat_filter(k, R1)
+        w2 = top_hat_filter(k, R2)
+    else:
+        w1 = starlet_filter(k, R1)
+        w2 = starlet_filter(k, R2)
+    return jnp.sum(w1 * w2 * bw)
+
+
+# ---------------------------------------------------------------------------
+# Variance class
+# ---------------------------------------------------------------------------
 
 class Variance:
     """
-    A class to compute linear and nonlinear variance using power spectrum interpolators and a specific cosmological model.
+    Compute linear and nonlinear convergence variances.
 
-    Attributes:
-        cosmo (Cosmology): An instance of a cosmology class providing necessary cosmological functions and parameters.
-        PK_interpolator_linear (Interpolator): An interpolator instance for linear power spectrum calculations.
-        PK_interpolator_nonlinear (Interpolator): An interpolator instance for nonlinear power spectrum calculations.
-        model (str): The name of the cosmological model to be used for variance calculations.
+    σ²(R₁, R₂, z) = (1/2π) ∫ k P(k,z) W(kR₁) W(kR₂) dk
 
+    Pre-computes Simpson weights and base-weight arrays (k·P(k)·w_simp/(2π))
+    at construction so that each nonlinear_sigma2 call reduces to a single
+    JIT-compiled dot product.
     """
 
     def __init__(self, cosmo, filter_type, pk):
-        """
-        Initializes the Variance class with cosmology and parameters for P(k) calculation.
-        Calculates the non-linear power spectrum, including cosmic variance noise if volume is specified.
-
-        Parameters:
-            cosmo (Cosmology_function): An instance of the cosmology class.
-            z_values (array-like): Redshifts for lensing planes/primary calculations.
-            volume (float, optional): Volume for cosmic variance calculation in (Mpc/h)^3. Defaults to None (no CV noise).
-            delta_A0 (float, optional): Parameter for additional non-Gaussian noise. Defaults to 1.9.
-        """
         self.cosmo = cosmo
         self.filter_type = filter_type
-        # print(" ")
-        # print("   Variance module initialized...")
-
         self.pk = pk
 
+        k = cosmo.k                                        # (nk,) numpy
+        self._k_jax = jnp.asarray(k, dtype=jnp.float64)
+
+        # Simpson integration weights for this k-grid (numpy, once)
+        simp_w = _simpson_weights_numpy(k)                 # (nk,) numpy
+        self._simp_w = simp_w
+
+        # Base weights per redshift: bw[z] = k · pk[z] · simp_w / (2π)
+        self._bw_numpy = {
+            z: k * p * simp_w / (2.0 * np.pi)
+            for z, p in pk.items()
+        }
+        self._bw_jax = {
+            z: jnp.asarray(bw, dtype=jnp.float64)
+            for z, bw in self._bw_numpy.items()
+        }
+
+        # Pre-warm JIT so compilation happens at construction, not first use
+        _z0 = next(iter(self._bw_jax))
+        _sigma2_jit(
+            self._k_jax, self._bw_jax[_z0], filter_type,
+            jnp.asarray(1.0, dtype=jnp.float64),
+            jnp.asarray(1.0, dtype=jnp.float64),
+        )
+
     def nonlinear_sigma2(self, redshift, R1, R2=None, **kwargs):
-        """
-        Calculates the nonlinear variance σ² for given scales and redshift, considering the specified model adjustments.
-
-        Parameters:
-            redshift (float): The redshift at which to evaluate the variance.
-            R1 (float): The first scale radius.
-            R2 (float, optional): The second scale radius. Defaults to R1 if not specified.
-
-        Returns:
-            float: The nonlinear variance σ² at the given scales and redshift.
-        """
+        """σ²(R₁, R₂, z) via JIT-compiled dot product."""
         if R2 is None:
             R2 = R1
+        if "pk" in kwargs:
+            bw = jnp.asarray(
+                self.cosmo.k * kwargs["pk"] * self._simp_w / (2.0 * np.pi),
+                dtype=jnp.float64,
+            )
         else:
-            R2 = R2
-        # pk = kwargs.get("pk", self.pk[redshift])
-        pk = kwargs["pk"] if "pk" in kwargs else self.pk[redshift]
-
-        # pk = self.pk[redshift]
-        k = self.cosmo.k      
-        if self.filter_type == "tophat":
-            w1_2D = top_hat_filter(self.cosmo.k, R1)
-            w2_2D = top_hat_filter(self.cosmo.k, R2)
-
-            w2 = w1_2D * w2_2D
-        elif self.filter_type == "starlet":
-            w1_2D = starlet_filter(self.cosmo.k, R1)
-            w2_2D = starlet_filter(self.cosmo.k, R2)
-
-            w2 = w1_2D * w2_2D
-        constant = 1.0 / 2.0 / np.pi
-        integrand = k * pk * w2 * constant
-        return simpson(integrand, x=k) 
+            bw = self._bw_jax[redshift]
+        return _sigma2_jit(self._k_jax, bw, self.filter_type, R1, R2)
 
     def get_sig_slice(self, z, R1, R2):
-        """
-        Calculates the slice variance σ² for the given scales and redshift in the nonlinear regime.
-
-        Parameters:
-            z (float): The redshift at which to evaluate the slice variance.
-            R1 (float): The first scale radius.
-            R2 (float): The second scale radius.
-
-        Returns:
-            float: The slice variance σ² at the given scales and redshift.
-        """
-        if self.filter_type == "tophat":
-            sigslice = (
-                self.nonlinear_sigma2(z, R1)
-                + self.nonlinear_sigma2(z, R2)
-                - 2.0 * self.nonlinear_sigma2(z, R1, R2)
-            )
-            return sigslice
-        elif self.filter_type == "starlet":
-            sigslice = (
-                self.nonlinear_sigma2(z, R1)
-                + self.nonlinear_sigma2(z, R2)
-                - 2.0 * self.nonlinear_sigma2(z, R1, R2)
-            )
-            return sigslice
+        """σ²(R₁) + σ²(R₂) − 2σ²(R₁, R₂)"""
+        return (
+            self.nonlinear_sigma2(z, R1)
+            + self.nonlinear_sigma2(z, R2)
+            - 2.0 * self.nonlinear_sigma2(z, R1, R2)
+        )
