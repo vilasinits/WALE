@@ -111,74 +111,110 @@ def get_l1_from_pdf(counts, bins):
     return counts * np.abs(bins)
 
 
-def compute_sigma_kappa_squared_(
-    theta_arcmin, chis, lensingweights, redshifts, k, pnl, filter_type, h
+def get_l1_estimator_variance(
+    pdf_values,
+    kappa_values,
+    A_survey_deg2,
+    theta_arcmin,
 ):
     """
-    Compute the smoothed convergence variance σ²_κ(θ) at a given angular scale using a filter.
+    Analytical variance of the L1-norm estimator from a finite survey.
 
-    This function computes the convergence power spectrum P_κ(ℓ) from a 3D P(k, z)
-    and integrates over ℓ using a top-hat or starlet filter.
+    For a survey containing N_pix effectively independent pixels (resolution
+    elements of size θ), the sample-mean L1 estimator has variance:
+
+        Var(L1) = [⟨κ²⟩ − ⟨|κ|⟩²] / N_pix_eff
+
+    where ⟨κ²⟩ and ⟨|κ|⟩ are computed from the supplied PDF.  This is the
+    central-limit-theorem (Poisson) contribution and is the dominant source of
+    L1 variability for weak-lensing surveys.
 
     Parameters
     ----------
+    pdf_values : ndarray
+        PDF values P(κ) (need not be normalised).
+    kappa_values : ndarray
+        Corresponding κ values (same units used in the LDT output).
+    A_survey_deg2 : float
+        Survey area in deg².
     theta_arcmin : float
-        Angular smoothing scale θ in arcminutes.
-    chis : ndarray
-        Comoving distances χ (in Mpc) corresponding to redshifts.
-    lensingweights : ndarray
-        Lensing kernel W(χ) evaluated at each χ.
-    redshifts : ndarray
-        Redshifts corresponding to chis.
-    k : ndarray
-        Wavenumber grid (in h/Mpc).
-    pnl : 2D ndarray
-        Nonlinear power spectrum P(k, z), shape (n_z, len(k)).
-    filter_type : str
-        Type of filter to apply ("tophat" or "starlet").
-    h : float
-        Reduced Hubble constant (H0 / 100).
+        Angular scale of the smoothing filter in arcmin.  The number of
+        independent pixels is estimated as A_survey / (π θ²).
 
     Returns
     -------
-    sigma2 : float
-        Smoothed convergence variance σ²_κ(θ).
+    l1_mean : float
+        ⟨|κ|⟩ = ∫ |κ| P(κ) dκ  (the fiducial L1 prediction).
+    l1_std : float
+        √Var(L1) — the 1-σ scatter of the L1 estimator.
+    n_pix_eff : float
+        Effective number of independent pixels used.
     """
-    theta_rad = (theta_arcmin * u.arcmin).to(u.rad).value
-    ell = np.logspace(1, 3, 600)
+    norm = np.trapezoid(pdf_values, kappa_values)
+    p = pdf_values / norm
 
-    P_kappa = np.zeros_like(ell)
-    pnl_array = np.array([pnl[z_] for z_ in redshifts])  # shape: (n_chi, nk)
+    l1_mean  = float(np.trapezoid(np.abs(kappa_values) * p, kappa_values))
+    kappa2   = float(np.trapezoid(kappa_values ** 2 * p, kappa_values))
 
-    for i, l in enumerate(ell):
+    A_survey_arcmin2 = A_survey_deg2 * 3600.0          # deg² → arcmin²
+    n_pix_eff = A_survey_arcmin2 / (np.pi * theta_arcmin ** 2)
 
-        chis_h_inv = chis #* h  # now in h⁻¹ Mpc
-        k_l = l / chis_h_inv
-        # Interpolate P(k) at each redshift slice
-        pk_vals = np.array(
-            [
-                np.interp(k_l[j], k, pnl_array[j], left=0, right=0)
-                for j in range(len(chis))
-            ]
-        )
-        integrand = (lensingweights / chis) ** 2 * pk_vals
-        P_kappa[i] = simpson(integrand, chis)
+    l1_var = max(kappa2 - l1_mean ** 2, 0.0) / n_pix_eff
+    l1_std = float(np.sqrt(l1_var))
 
-    # Apply top-hat filter window in Fourier space
-    if filter_type == "tophat":
-        W = top_hat_filter(ell, 2.0 * theta_rad) - top_hat_filter(ell, theta_rad)
-    elif filter_type == "starlet":
-        W = starlet_filter(ell, 2.0 * theta_rad) - starlet_filter(ell, theta_rad)
+    return l1_mean, l1_std, n_pix_eff
 
-    pixel_window = apply_pixel_window(ell, theta_deg=theta_rad * u.rad.to(u.deg))
-    integrand = ell * P_kappa #* (W**2) 
-    sigma2 = simpson(integrand, ell) / (2.0 * np.pi)
 
-    return sigma2
+def sample_l1_from_pdf(
+    pdf_values,
+    kappa_values,
+    A_survey_deg2,
+    theta_arcmin,
+    n_maps=500,
+    seed=None,
+):
+    """
+    Monte-Carlo distribution of the L1-norm estimator over mock survey realisations.
 
-import numpy as np
-from scipy.integrate import simpson
-import astropy.units as u
+    For each mock map, ``n_pix_eff`` κ values are drawn independently from the
+    LDT PDF and the L1 estimator is computed.  The resulting array of L1 values
+    gives the full sampling distribution (including non-Gaussian tails).
+
+    Parameters
+    ----------
+    pdf_values : ndarray
+    kappa_values : ndarray
+    A_survey_deg2 : float
+        Survey area in deg².
+    theta_arcmin : float
+        Filter scale in arcmin.
+    n_maps : int, optional
+        Number of mock maps to draw (default 500).
+    seed : int or None, optional
+
+    Returns
+    -------
+    l1_samples : ndarray, shape (n_maps,)
+        L1 estimate for each mock map.
+    n_pix_eff : int
+        Number of pixels drawn per map.
+    """
+    rng = np.random.default_rng(seed)
+
+    norm = np.trapezoid(pdf_values, kappa_values)
+    p = np.maximum(pdf_values / norm, 0.0)
+    p /= p.sum()   # discrete weights for np.random.choice
+
+    A_survey_arcmin2 = A_survey_deg2 * 3600.0
+    n_pix_eff = max(int(A_survey_arcmin2 / (np.pi * theta_arcmin ** 2)), 1)
+
+    l1_samples = np.empty(n_maps)
+    for i in range(n_maps):
+        kappa_drawn = rng.choice(kappa_values, size=n_pix_eff, p=p)
+        l1_samples[i] = float(np.mean(np.abs(kappa_drawn)))
+
+    return l1_samples, n_pix_eff
+
 
 def compute_sigma_kappa_squared(
     theta_arcmin, chis, lensingweights, redshifts, k, pnl, filter_type, h
@@ -187,8 +223,8 @@ def compute_sigma_kappa_squared(
     σ^2_κ(θ) from Limber: P_κ(ℓ) = ∫ dχ [W(χ)/χ]^2 P(k=(ℓ+1/2)/χ, z(χ)).
     Inputs:
       - chis: comoving distances in Mpc
-      - k: in h/Mpc
-      - pnl: dict mapping redshift -> P(k) array (len == len(k))  (kept as you use it)
+      - k: in 1/Mpc (PyCCL convention; P(k) in Mpc³)
+      - pnl: dict mapping redshift -> P(k) array (len == len(k))
     """
 
     def _p_of_k_for_z(z):
@@ -239,8 +275,8 @@ def compute_sigma_kappa_squared(
     if pnl_array.shape[1] != k.size:
         raise ValueError("Each pnl[z] must be 1D with length len(k).")
 
-    # Limber k(ℓ,χ) in h/Mpc (χ in Mpc → multiply by h). Use improved Limber (ℓ+1/2).
-    k_l = (ell[:, None] + 0.5) * (1. / chis[None, :])  # (n_ell, n_chi)
+    # Limber k(ℓ,χ) in 1/Mpc. Improved Limber approximation (ℓ+1/2).
+    k_l = (ell[:, None] + 0.5) / chis[None, :]  # (n_ell, n_chi)
 
     # Interpolate P(k,z) at each χ onto k_l
     pk_vals = np.empty_like(k_l)
