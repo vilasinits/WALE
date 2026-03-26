@@ -386,3 +386,258 @@ def sigma_kappa_var_from_ccl(theta_arcmin,
     # σ^2_κ
     sigma2 = simpson(ell * C_ell * (Wl**2), x=ell) / (2.0 * np.pi)
     return float(sigma2)
+
+
+def get_l1_ssc_variance(
+    pdf_values,
+    kappa_values,
+    sigmasq_kappa,
+    A_survey_deg2,
+    chis,
+    lensingweights,
+    redshifts,
+    k,
+    pnl,
+    filter_type="tophat",
+    h=0.681,
+    bias="gaussian",
+):
+    """
+    Super-sample covariance (SSC) contribution to the L1-norm variance.
+
+    From Uhlemann et al. 2022 (arXiv:2210.07819), Eq. (13a) applied to L1:
+
+        Var_SSC(L1) = ξ̄ × [∫ |κ| b₁(κ) P(κ) dκ]²
+
+    where:
+      - ξ̄ = σ²_κ(θ_survey)  — variance of the mean convergence over the survey
+        (variance of the background mode δ_b averaged over the survey patch)
+        computed at the effective survey angular scale θ_survey = sqrt(A/π).
+      - b₁(κ) = κ / σ²_κ    — Gaussian linear bias (response of the one-point
+        PDF to a uniform background shift δ_b; Uhlemann+2022 Eq. 22).
+      - P(κ) is the fiducial one-point PDF.
+
+    The physical picture: different survey realizations probe different background
+    modes. A positive δ_b shifts the whole κ-field upward → the PDF shifts right
+    → L1 changes coherently. ξ̄ measures how much the background mode varies
+    between realizations of a survey of area A.
+
+    Parameters
+    ----------
+    pdf_values : ndarray
+        Fiducial PDF P(κ), need not be normalised.
+    kappa_values : ndarray
+        κ grid matching pdf_values.
+    sigmasq_kappa : float
+        σ²_κ at the filter scale θ (the LDT/PT variance, not the survey scale).
+        Used to normalise b₁(κ) = κ / σ²_κ.
+    A_survey_deg2 : float
+        Survey area in deg².
+    chis : ndarray
+        Comoving distances of lens planes (Mpc).
+    lensingweights : ndarray
+        Lensing weight W(χ) at each chi.
+    redshifts : ndarray
+        Redshifts at each chi plane.
+    k : ndarray
+        Wavenumber grid in 1/Mpc.
+    pnl : dict
+        {z: P(k)} nonlinear power spectrum dict.
+    filter_type : str
+        'tophat' or 'starlet'.
+    h : float
+        Dimensionless Hubble parameter (used only to label units).
+    bias : str
+        'gaussian'  → b₁(κ) = κ / σ²_κ  (Uhlemann+2022 Eq. 22)
+        (lognormal support can be added later)
+
+    Returns
+    -------
+    l1_mean : float
+        ⟨|κ|⟩ — fiducial L1 value.
+    l1_std_ssc : float
+        √Var_SSC(L1) — SSC contribution to L1 scatter.
+    xi_bar : float
+        ξ̄ = σ²_κ(θ_survey) — the mean convergence variance over the survey.
+    A_ssc : float
+        The SSC amplitude ∫|κ| b₁(κ) P(κ) dκ = ⟨κ|κ|⟩ / σ²_κ.
+    """
+    # Normalise PDF
+    norm = np.trapezoid(pdf_values, kappa_values)
+    p = pdf_values / norm
+
+    # L1 mean
+    l1_mean = float(np.trapezoid(np.abs(kappa_values) * p, kappa_values))
+
+    # Gaussian bias: b₁(κ) = κ / σ²_κ
+    b1 = kappa_values / sigmasq_kappa
+
+    # SSC amplitude A = ∫ |κ| b₁(κ) P(κ) dκ = ⟨κ|κ|⟩ / σ²_κ
+    A_ssc = float(np.trapezoid(np.abs(kappa_values) * b1 * p, kappa_values))
+
+    # Survey angular scale: θ_survey = sqrt(A/π) in arcmin
+    A_survey_arcmin2 = A_survey_deg2 * 3600.0
+    theta_survey_arcmin = float(np.sqrt(A_survey_arcmin2 / np.pi))
+
+    # ξ̄ = σ²_κ(θ_survey) — convergence variance at the survey scale
+    xi_bar = float(compute_sigma_kappa_squared(
+        theta_survey_arcmin,
+        chis,
+        lensingweights,
+        redshifts,
+        k,
+        pnl,
+        filter_type=filter_type,
+        h=h,
+    ))
+
+    # Var_SSC(L1) = ξ̄ × A²
+    l1_var_ssc = xi_bar * A_ssc ** 2
+    l1_std_ssc = float(np.sqrt(max(l1_var_ssc, 0.0)))
+
+    return l1_mean, l1_std_ssc, xi_bar, A_ssc
+
+
+def sample_l1_ssc(
+    pdf_values,
+    kappa_values,
+    xi_bar,
+    n_samples=500,
+    seed=None,
+):
+    """
+    Generate L1-norm samples driven by SSC (background convergence mode).
+
+    Physical picture (Uhlemann+2022 §2.2):
+    A background convergence mode δ_b coherent over the entire survey shifts
+    every pixel's κ by the same amount.  This is the dominant source of
+    realisation-to-realisation scatter in small-to-medium surveys.
+
+    Sampling procedure:
+        δ_b  ~  N(0, ξ̄)                    (background amplitude)
+        P_n(κ) = P_fid(κ − δ_b)             (pure shift of the PDF)
+        L1_n   = ∫ |κ| P_n(κ) dκ
+               = ∫ |κ + δ_b| P_fid(κ) dκ
+
+    By construction this gives:
+        Var(L1_samples) → ξ̄ × [∫ sign(κ) P(κ) dκ]²   (linear in δ_b)
+
+    which is exactly the SSC prediction from ``get_l1_ssc_variance`` at
+    linear order.  The PDF-shift approach is exact for the SSC mechanism
+    without requiring a full LDT re-run per sample.
+
+    Parameters
+    ----------
+    pdf_values : ndarray
+        Fiducial PDF P(κ), need not be normalised.
+    kappa_values : ndarray
+        κ grid matching pdf_values.
+    xi_bar : float
+        ξ̄ = σ²_κ(θ_survey) — background mode variance, from
+        ``get_l1_ssc_variance`` or ``compute_sigma_kappa_squared`` at the
+        survey angular scale.
+    n_samples : int
+        Number of L1 realisations to draw.
+    seed : int or None
+        Random seed.
+
+    Returns
+    -------
+    l1_samples : ndarray, shape (n_samples,)
+        L1-norm values for each background-mode realisation.
+    delta_b_samples : ndarray, shape (n_samples,)
+        The drawn background convergence amplitudes δ_b.
+    """
+    rng = np.random.default_rng(seed)
+    norm = np.trapezoid(pdf_values, kappa_values)
+    p = pdf_values / norm
+
+    delta_b_samples = rng.normal(0.0, np.sqrt(float(xi_bar)), size=n_samples)
+
+    l1_samples = np.array([
+        float(np.trapezoid(np.abs(kappa_values + db) * p, kappa_values))
+        for db in delta_b_samples
+    ])
+    return l1_samples, delta_b_samples
+
+
+def sample_l1_combined(
+    pdf_values,
+    kappa_values,
+    sigmasq_kappa,
+    xi_bar,
+    A_survey_deg2,
+    theta_arcmin,
+    n_samples=500,
+    seed=None,
+):
+    """
+    Generate L1-norm samples including BOTH shot noise and SSC.
+
+    Shot noise:  sample N_pix κ values from P(κ) per mock → mean |κ|
+    SSC:         add a coherent background shift δ_b ~ N(0, ξ̄)
+
+    The two are independent so the total variance is additive:
+        Var_total(L1) = Var_shot + Var_SSC
+
+    Parameters
+    ----------
+    pdf_values, kappa_values : ndarray
+        Fiducial PDF (need not be normalised).
+    sigmasq_kappa : float
+        σ²_κ at the filter scale (used only for reference; not needed for sampling).
+    xi_bar : float
+        ξ̄ — background mode variance from ``get_l1_ssc_variance``.
+    A_survey_deg2 : float
+        Survey area in deg².
+    theta_arcmin : float
+        Filter scale in arcmin.  N_pix = A / (π θ²).
+    n_samples : int
+        Number of mock survey realisations.
+    seed : int or None
+
+    Returns
+    -------
+    l1_samples : ndarray, shape (n_samples,)
+        Combined (shot + SSC) L1 samples.
+    l1_shot_only : ndarray, shape (n_samples,)
+        Shot-noise-only L1 samples (δ_b = 0).
+    l1_ssc_only : ndarray, shape (n_samples,)
+        SSC-only L1 samples (N_pix → ∞, just the δ_b shift).
+    """
+    rng = np.random.default_rng(seed)
+    norm = np.trapezoid(pdf_values, kappa_values)
+    p = pdf_values / norm
+
+    A_arcmin2 = A_survey_deg2 * 3600.0
+    n_pix = int(A_arcmin2 / (np.pi * theta_arcmin ** 2))
+
+    # SSC background shifts
+    delta_b = rng.normal(0.0, np.sqrt(float(xi_bar)), size=n_samples)
+
+    l1_combined  = np.empty(n_samples)
+    l1_shot_only = np.empty(n_samples)
+    l1_ssc_only  = np.empty(n_samples)
+
+    kappa_grid = np.asarray(kappa_values)
+    dk = kappa_grid[1] - kappa_grid[0]   # assume uniform spacing
+    cdf = np.cumsum(p) * dk
+    cdf /= cdf[-1]
+
+    from scipy.interpolate import interp1d
+    inv_cdf = interp1d(cdf, kappa_grid, bounds_error=False,
+                       fill_value=(kappa_grid[0], kappa_grid[-1]))
+
+    for n in range(n_samples):
+        # Shot noise: sample N_pix kappas from P(kappa)
+        u = rng.uniform(size=n_pix)
+        kappa_drawn = inv_cdf(u)
+        l1_shot = float(np.mean(np.abs(kappa_drawn)))
+
+        db = delta_b[n]
+        # SSC: uniform shift of drawn kappas
+        l1_combined[n]  = float(np.mean(np.abs(kappa_drawn + db)))
+        l1_shot_only[n] = l1_shot
+        l1_ssc_only[n]  = float(np.trapezoid(np.abs(kappa_grid + db) * p, kappa_grid))
+
+    return l1_combined, l1_shot_only, l1_ssc_only

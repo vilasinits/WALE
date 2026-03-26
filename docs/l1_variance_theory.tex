@@ -1,0 +1,553 @@
+%% l1_variance_theory.tex
+%% Theory notes for L1-norm variability in weak-lensing convergence maps.
+%% Covers: LDT pipeline, C_ell vs sigma^2_kappa vs L1, P(k) cosmic variance,
+%%         shot noise, and SSC (Uhlemann et al. 2022).
+%% Equations correspond exactly to the implementations in:
+%%   src/wale/CommonUtils.py  (get_l1_estimator_variance, get_l1_ssc_variance,
+%%                              sample_l1_ssc, sample_l1_combined,
+%%                              compute_sigma_kappa_squared)
+%%   src/wale/CovarianceMatrix.py  (get_covariance, sample_pk_ssc)
+
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{physics}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\newcommand{\kappa}{\kappa}
+\newcommand{\sigk}{\sigma^2_\kappa}
+\newcommand{\xibar}{\bar{\xi}}
+\newcommand{\Lbox}{L_\mathrm{box}}
+\newcommand{\Nmodes}{N_\mathrm{modes}}
+\newcommand{\Pk}{P(k)}
+\newcommand{\Pkz}{P(k,z)}
+\newcommand{\Cell}{C_\ell}
+\newcommand{\Pell}{P_\kappa(\ell)}
+\newcommand{\Wl}{W(\ell\theta)}
+\newcommand{\pnl}{P_\mathrm{nl}}
+
+\title{\textbf{Variability of the Weak-Lensing $\ell_1$-Norm:}\\
+       \large Angular Power Spectrum, Convergence Variance, and Super-Sample Covariance}
+\author{WALE theory notes}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\bigskip
+
+%% =========================================================================
+\section{Overview}
+%% =========================================================================
+
+The wavelet $\ell_1$-norm (L1) of a weak-lensing convergence map,
+\begin{equation}
+  L_1 \;\equiv\; \langle|\kappa|\rangle \;=\; \int_{-\infty}^{\infty} |\kappa|\,P(\kappa)\,\dd\kappa,
+  \label{eq:L1_def}
+\end{equation}
+is a sensitive probe of non-Gaussianity in the large-scale structure.
+This document describes the three distinct sources of \emph{realization-to-realization
+variability} in $L_1$ and how each is modeled in the WALE pipeline:
+
+\begin{enumerate}
+  \item \textbf{Shot noise} (finite sampling): $N_\mathrm{pix}$ independent pixels.
+  \item \textbf{$P(k)$ cosmic variance}: mode-counting scatter in the matter power spectrum,
+        including a non-Gaussian (i-trispectrum) contribution.
+  \item \textbf{Super-sample covariance (SSC)}: a background convergence mode
+        $\delta_b$ coherent over the entire survey patch shifts the full
+        PDF rigidly.
+\end{enumerate}
+
+A central result is that $C_\ell$ and $\sigk$ are two representations of the
+\emph{same} two-point information, while $L_1$ captures additional non-Gaussian
+information from the full shape of $P(\kappa)$.  The SSC term affects both
+$C_\ell$ and $L_1$, but through different response amplitudes.
+
+%% =========================================================================
+\section{LDT Pipeline: from $P(k)$ to $P(\kappa)$ to $L_1$}
+%% =========================================================================
+
+\subsection{Convergence variance and the angular power spectrum}
+
+The convergence field smoothed at angular scale $\theta$ has variance
+\begin{equation}
+  \sigk(\theta) \;=\; \frac{1}{2\pi}
+  \int_0^\infty \ell\,\Pell\,|\Wl|^2\,\dd\ell,
+  \label{eq:sigma2_ell}
+\end{equation}
+where $\Pell$ is the convergence angular power spectrum and $W(\ell\theta)$
+is the Fourier-space filter window (top-hat or starlet).
+Under the Limber approximation,
+\begin{equation}
+  \Pell \;=\; \int_0^{\chi_\mathrm{s}} \dd\chi\;
+  \left[\frac{W(\chi)}{\chi}\right]^2
+  P_\mathrm{nl}\!\left(k = \frac{\ell+\tfrac{1}{2}}{\chi},\,z(\chi)\right),
+  \label{eq:Pkappa_limber}
+\end{equation}
+where $W(\chi)$ is the lensing weight kernel and $P_\mathrm{nl}(k,z)$ is the
+nonlinear matter power spectrum (HALOFIT via PyCCL; $k$ in Mpc$^{-1}$,
+$P$ in Mpc$^3$).
+
+In the WALE pipeline this integral is computed numerically on a discrete set
+of lens planes $\{\chi_i, z_i\}$ as
+\begin{equation}
+  \sigk(\theta) \;\approx\; \Delta\chi \sum_i W_i^2\,
+  \sigma^2_\mathrm{slice}(z_i,\theta_1,\theta_2),
+  \label{eq:sigma2_discrete}
+\end{equation}
+where $\sigma^2_\mathrm{slice}$ is the two-filter slice variance computed by
+\texttt{Variance.get\_sig\_slice} and $\Delta\chi$ is the plane spacing.
+
+\paragraph{Equivalence of $C_\ell$ and $\sigk$.}
+Equations~\eqref{eq:sigma2_ell} and~\eqref{eq:Pkappa_limber} show that
+$\sigk(\theta)$ is a filtered integral of $C_\ell$.  The two quantities
+carry \emph{identical} two-point information; $C_\ell$ is simply
+$\sigk$ unfiltered.  Both are second-order statistics of the convergence
+field.
+
+\subsection{From variance to the one-point PDF}
+
+Large Deviation Theory (LDT; Bernardeau \& Reimberg 2016;
+Barthelemy et al.~2020; Uhlemann et al.~2023) predicts the full
+one-point PDF $P(\kappa)$ from the nonlinear matter power spectrum.
+The key steps are:
+\begin{enumerate}
+  \item Compute the rate function (action) $\psi(\delta_1,\delta_2; z)$
+        via the two-cell LDT saddle-point equations
+        (\texttt{RateFunction.py}).
+  \item Project along the line of sight using the lensing kernel to
+        obtain the projected SCGF $\varphi(y)$
+        (\texttt{ComputePDF.py}).
+  \item Invert via a Bromwich integral (inverse Laplace transform) to
+        get $P(\kappa)$.
+\end{enumerate}
+The LDT variance $\sigk^\mathrm{LDT}$ and the perturbation-theory variance
+$\sigk^\mathrm{PT}$ (Eq.~\ref{eq:sigma2_discrete}) are related by the
+\emph{recalibration factor}
+\begin{equation}
+  r \;=\; \frac{\sigk^\mathrm{LDT}}{\sigk^\mathrm{PT}},
+\end{equation}
+which captures nonlinear corrections.
+
+\subsection{The L1 norm}
+
+Given $P(\kappa)$ from LDT, the fiducial L1 prediction is
+\begin{equation}
+  L_1^\mathrm{fid} \;=\; \int |\kappa|\,P(\kappa)\,\dd\kappa.
+  \label{eq:L1_fid}
+\end{equation}
+For a Gaussian PDF with variance $\sigk$ this reduces to
+$L_1 = \sqrt{2\sigk/\pi}$, but for the positively skewed
+convergence field the LDT prediction is systematically larger.
+$L_1$ is a \emph{non-Gaussian} statistic: it contains information beyond
+the power spectrum $C_\ell$ or $\sigk$.
+
+%% =========================================================================
+\section{Source~1: Shot Noise (Finite Sampling)}
+%% =========================================================================
+
+\subsection{Analytical variance}
+
+A survey of area $A$ smoothed at scale $\theta$ contains approximately
+\begin{equation}
+  N_\mathrm{pix} \;\approx\; \frac{A}{\pi\theta^2}
+  \label{eq:Npix}
+\end{equation}
+statistically independent resolution elements (pixels).
+The empirical L1 estimator
+$\hat{L}_1 = N_\mathrm{pix}^{-1}\sum_i|\kappa_i|$
+has variance
+\begin{equation}
+  \mathrm{Var}_\mathrm{shot}(L_1) \;=\;
+  \frac{\langle\kappa^2\rangle - \langle|\kappa|\rangle^2}{N_\mathrm{pix}},
+  \label{eq:Var_shot}
+\end{equation}
+where $\langle\kappa^2\rangle = \sigk$ and $\langle|\kappa|\rangle = L_1^\mathrm{fid}$
+are computed from the LDT PDF.  This is the standard central-limit-theorem
+(Poisson) variance for the mean of $|\kappa|$.
+
+\paragraph{Implementation.}  \texttt{CommonUtils.get\_l1\_estimator\_variance}
+evaluates Eq.~\eqref{eq:Var_shot} from the raw LDT PDF arrays; no simulation
+is needed.
+
+\subsection{Monte-Carlo sampling}
+
+The analytical result assumes Gaussian statistics of the estimator, which
+requires $N_\mathrm{pix}\gg 1$.  For small surveys, the full sampling
+distribution (including non-Gaussian tails from the skewed $P(\kappa)$)
+is obtained by:
+\begin{enumerate}
+  \item Draw $N_\mathrm{pix}$ values $\{\kappa_j\}$ from $P(\kappa)$ using
+        inverse-CDF sampling.
+  \item Compute $\hat{L}_1 = N_\mathrm{pix}^{-1}\sum_j|\kappa_j|$.
+  \item Repeat for $n_\mathrm{maps}$ mock surveys.
+\end{enumerate}
+Implemented in \texttt{CommonUtils.sample\_l1\_from\_pdf}.
+
+%% =========================================================================
+\section{Source~2: $P(k)$ Cosmic Variance}
+%% =========================================================================
+
+\subsection{Mode-counting covariance}
+
+A simulation box of side $\Lbox$ contains a finite number of independent
+Fourier modes in each $k$-shell of width $\Delta k$:
+\begin{equation}
+  \Nmodes(k) \;=\; \frac{V}{3(2\pi)^2}
+  \left[\left(k+\tfrac{\Delta k}{2}\right)^3
+        - \left(k-\tfrac{\Delta k}{2}\right)^3\right],
+\end{equation}
+where $V = \Lbox^3$.
+The diagonal (Gaussian) covariance of $P(k)$ is
+\begin{equation}
+  \mathrm{Cov}^G[P(k),P(k')] \;=\; \frac{2\,P(k)^2}{\Nmodes(k)}\,\delta_{kk'}.
+  \label{eq:CovG}
+\end{equation}
+
+\subsection{Non-Gaussian (i-trispectrum) contribution}
+
+Following Gualdi et al.~(2021), the connected non-Gaussian contribution
+from the integrated trispectrum adds a rank-1 matrix to the covariance:
+\begin{equation}
+  \mathrm{Cov}^\mathrm{NG}[P(k),P(k')] \;=\;
+  \frac{A_\mathrm{eff}(k)\,A_\mathrm{eff}(k')}{V},
+  \label{eq:CovNG}
+\end{equation}
+with the effective amplitude
+\begin{equation}
+  A_\mathrm{eff}(k) \;=\; \alpha
+  \left(\frac{k}{k_0}\right)^\beta
+  \left[1+\left(\frac{k}{k_1}\right)^\gamma\right]^{-\delta},
+  \quad
+  \alpha=35,\;\beta=0.87,\;\gamma=1.94,\;\delta=2.11,\;k_0=0.1,\;k_1=1\;\mathrm{Mpc}^{-1}.
+  \label{eq:Aeff}
+\end{equation}
+
+\subsection{Fractional covariance and z-correlated sampling}
+
+The \emph{fractional} covariance (independent of $P(k)$ shape) is
+\begin{equation}
+  C_\mathrm{frac}(k,k') \;=\;
+  \frac{2}{\Nmodes(k)}\,\delta_{kk'}
+  \;+\;
+  \frac{A_\mathrm{eff}(k)\,A_\mathrm{eff}(k')}{V}.
+  \label{eq:Cfrac}
+\end{equation}
+A single fractional shape fluctuation $\bm{\varepsilon}(k)$ is drawn per
+realization from
+\begin{equation}
+  \bm{\varepsilon} \;\sim\; \mathcal{N}\!\left(\mathbf{0},\,C_\mathrm{frac}\right),
+  \label{eq:eps_draw}
+\end{equation}
+and applied to \emph{all} redshift slices simultaneously:
+\begin{equation}
+  P_n(k,z_i) \;=\; P_\mathrm{fid}(k,z_i)\,\bigl[1 + \varepsilon(k)\bigr],
+  \qquad \forall\;i.
+  \label{eq:Pn_z}
+\end{equation}
+This enforces the physical requirement that large-scale structure fluctuations
+are coherent across redshift — using independent $\varepsilon$ per $z$
+(the naive approach) would break this coherence and underestimate
+cross-$z$ correlations.
+
+\paragraph{Implementation.}  \texttt{CovarianceMatrix.get\_covariance}
+with \texttt{variability=True} draws $N$ realizations following
+Eqs.~\eqref{eq:Cfrac}--\eqref{eq:Pn_z}.
+
+\subsection{Why P(k) CV gives only $\sim 0.4\%$ L1 variability}
+
+Propagating Eq.~\eqref{eq:Pn_z} through the variance integral,
+\begin{equation}
+  \frac{\Delta\sigk}{\sigk}
+  \;=\; \frac{\int_0^\infty k\,\Delta P(k)\,|\hat{W}(kR)|^2\,\dd k}
+             {\int_0^\infty k\,P_\mathrm{fid}(k)\,|\hat{W}(kR)|^2\,\dd k},
+\end{equation}
+the numerator averages $\varepsilon(k)$ weighted by $k P(k)W^2$ over $\sim 100$
+independent $k$-shells, reducing the per-shell scatter of order
+$\sim\sqrt{2/\Nmodes}\sim\mathcal{O}(10\%)$ to an effective scatter of
+$\lesssim 0.4\%$ in $\sigk$.
+Since $L_1 \approx f(\sigk)$ in this regime, the resulting L1 scatter is
+equally tiny.  This is correct physics — it shows that $P(k)$ cosmic
+variance \emph{alone} cannot explain survey-to-survey L1 scatter.
+
+%% =========================================================================
+\section{Source~3: Super-Sample Covariance (SSC)}
+%% =========================================================================
+
+\subsection{Physical picture}
+
+\noindent\textit{Reference: Uhlemann et al.~(2022), arXiv:2210.07819,
+Eqs.~(13), (22); Lacasa \& Grain (2019).}
+
+\medskip
+Each survey realization probes a different background density mode
+$\delta_b$ — the density fluctuation coherent over the entire survey footprint.
+For the convergence field, this background mode shifts every pixel's $\kappa$
+by the same amount:
+\begin{equation}
+  \kappa_i^\mathrm{(n)} \;=\; \kappa_i^\mathrm{fid} + \delta_b^{(n)},
+  \qquad\forall\;i\;\text{in the survey}.
+  \label{eq:kappa_shift}
+\end{equation}
+Equivalently, the one-point PDF of the $n$-th realization is a \emph{pure
+shift} of the fiducial PDF:
+\begin{equation}
+  P_n(\kappa) \;=\; P_\mathrm{fid}(\kappa - \delta_b^{(n)}).
+  \label{eq:PDF_shift}
+\end{equation}
+
+The background mode variance is
+\begin{equation}
+  \mathrm{Var}(\delta_b) \;=\;
+  \xibar \;\equiv\; \sigk(\theta_\mathrm{survey}),
+  \label{eq:xibar_def}
+\end{equation}
+where $\theta_\mathrm{survey} = \sqrt{A/\pi}$ is the effective angular radius
+of the survey and $\sigk(\theta)$ is evaluated from Eq.~\eqref{eq:sigma2_ell}.
+Thus $\delta_b \sim \mathcal{N}(0,\,\xibar)$.
+
+\subsection{SSC covariance of the one-point PDF}
+
+From Uhlemann et al.~(2022), Eq.~(13a), the SSC contribution to the
+covariance of the one-point PDF $P(\kappa)$ is rank-1:
+\begin{equation}
+  \mathrm{Cov}_\mathrm{SSC}\bigl[P(\kappa_i),\,P(\kappa_j)\bigr]
+  \;=\; \xibar\;
+  \bigl[b_1(\kappa_i)\,P(\kappa_i)\bigr]\,
+  \bigl[b_1(\kappa_j)\,P(\kappa_j)\bigr],
+  \label{eq:Cov_SSC_PDF}
+\end{equation}
+where $b_1(\kappa)$ is the \emph{linear bias} of the one-point PDF with
+respect to a uniform background shift.  For a Gaussian field (Uhlemann
+et al.~2022, Eq.~22):
+\begin{equation}
+  b_1(\kappa) \;=\; \frac{\kappa}{\sigk},
+  \label{eq:b1_gaussian}
+\end{equation}
+i.e.\ $\partial \ln P_\mathrm{Gaussian}/\partial\delta_b = b_1(\kappa)$.
+
+\subsection{SSC variance of $L_1$}
+
+Propagating Eq.~\eqref{eq:Cov_SSC_PDF} through $L_1 = \int|\kappa|P\dd\kappa$:
+\begin{equation}
+  \mathrm{Var}_\mathrm{SSC}(L_1)
+  \;=\; \xibar \left[\int|\kappa|\,b_1(\kappa)\,P(\kappa)\,\dd\kappa\right]^2
+  \;\equiv\; \xibar\,A_\mathrm{SSC}^2,
+  \label{eq:Var_SSC_L1}
+\end{equation}
+with the \emph{SSC amplitude}
+\begin{equation}
+  A_\mathrm{SSC}
+  \;=\; \int|\kappa|\,b_1(\kappa)\,P(\kappa)\,\dd\kappa
+  \;=\; \frac{\langle\kappa|\kappa|\rangle}{\sigk},
+  \label{eq:A_SSC}
+\end{equation}
+where $\langle\kappa|\kappa|\rangle = \int\kappa|\kappa|P(\kappa)\dd\kappa$
+is a skewness-like moment.
+
+\paragraph{Symmetry argument.}
+For a symmetric (even) PDF, $\langle\kappa|\kappa|\rangle = 0$ and
+$A_\mathrm{SSC} = 0$: SSC does \emph{not} contribute to L1 scatter for
+Gaussian fields.  The convergence PDF is positively skewed (massive halos
+produce rare high-$\kappa$ events), so $A_\mathrm{SSC} > 0$ and SSC
+contributes.
+
+\paragraph{Implementation.}
+\texttt{CommonUtils.get\_l1\_ssc\_variance} evaluates Eqs.~\eqref{eq:xibar_def},
+\eqref{eq:b1_gaussian}, \eqref{eq:A_SSC}, and \eqref{eq:Var_SSC_L1}
+from the LDT PDF arrays.
+
+\subsection{Monte-Carlo sampling of the SSC shift}
+
+PDF-level SSC samples are generated by:
+\begin{enumerate}
+  \item Draw $\delta_b \sim \mathcal{N}(0,\,\xibar)$.
+  \item Compute $L_1^{(n)} = \int|\kappa + \delta_b|\,P_\mathrm{fid}(\kappa)\,\dd\kappa$.
+\end{enumerate}
+This is exact for the SSC mechanism (no linearization) and consistent with
+Eq.~\eqref{eq:Var_SSC_L1} at linear order in $\delta_b$.
+
+\paragraph{Implementation.}
+\texttt{CommonUtils.sample\_l1\_ssc}.
+
+\subsection{Combined shot noise + SSC sampling}
+
+The two sources are \emph{independent} (shot noise is pixel-level;
+SSC is a long-wavelength mode), so their variances add:
+\begin{equation}
+  \mathrm{Var}_\mathrm{tot}(L_1)
+  \;=\; \mathrm{Var}_\mathrm{shot}(L_1)
+        \;+\; \mathrm{Var}_\mathrm{SSC}(L_1).
+  \label{eq:Var_tot}
+\end{equation}
+Monte-Carlo realizations are generated by:
+\begin{enumerate}
+  \item Draw $\delta_b \sim \mathcal{N}(0,\,\xibar)$ (SSC background mode).
+  \item Draw $N_\mathrm{pix}$ values $\{\kappa_j\}$ from $P_\mathrm{fid}(\kappa)$
+        (shot noise).
+  \item The combined sample is
+        $L_1^{(n)} = N_\mathrm{pix}^{-1}\sum_j|\kappa_j + \delta_b|$.
+\end{enumerate}
+
+\paragraph{Implementation.}
+\texttt{CommonUtils.sample\_l1\_combined}.
+
+%% =========================================================================
+\section{SSC at the $P(k)$ Level: Separate-Universe Response}
+%% =========================================================================
+
+\subsection{Growth response}
+
+The effect of a background density mode $\delta_b$ on the local matter
+power spectrum is given by the separate-universe response
+(Wagner et al.~2015; Barreira et al.~2017):
+\begin{equation}
+  P_n(k,z) \;=\; P_\mathrm{fid}(k,z)\,
+  \bigl[1 + R_1(k,z)\,\delta_b\bigr],
+  \label{eq:Pn_ssc}
+\end{equation}
+with the growth response
+\begin{equation}
+  R_1(k,z) \;=\; \frac{26}{21}
+  \;+\; \frac{1}{3}\,\frac{\dd\ln P_\mathrm{nl}}{\dd\ln k}.
+  \label{eq:R1}
+\end{equation}
+The $26/21$ factor is the linear growth response; the logarithmic
+derivative accounts for the scale-dependent nonlinear correction.
+Crucially, the \emph{same} $\delta_b$ is applied to all redshift slices
+simultaneously — SSC is a large-scale, z-coherent perturbation.
+
+\subsection{Self-consistency requirement}
+
+The P(k)-level route (Eq.~\ref{eq:Pn_ssc} propagated through the full LDT
+pipeline) and the PDF-level route (Eq.~\ref{eq:PDF_shift}) should give the
+same $\mathrm{Var}(L_1)$.  This is guaranteed because both use the same
+$\delta_b \sim \mathcal{N}(0,\,\xibar)$.  The P(k) route captures the
+SSC effect \emph{indirectly} through $\Delta\sigk$:
+\begin{equation}
+  \frac{\Delta\sigk}{\sigk}
+  \;\approx\;
+  \frac{\int_0^\infty k\,P_\mathrm{fid}(k)\,R_1(k)\,|\hat{W}|^2\,\dd k}
+       {\sigk}\;\delta_b
+  \;\equiv\; C_R\,\delta_b,
+  \label{eq:DeltaSigma2}
+\end{equation}
+whereas the PDF route captures it \emph{directly} through the κ-shift.
+For a non-Gaussian PDF, the direct route dominates.
+
+\paragraph{Implementation.}
+\texttt{CovarianceMatrix.sample\_pk\_ssc} draws $\delta_b^{(n)}\sim\mathcal{N}(0,\xibar)$
+and returns $P_n(k,z_i)$ via Eq.~\eqref{eq:Pn_ssc} for $n=1,\ldots,N$.
+
+%% =========================================================================
+\section{Relationship: $C_\ell$ vs $\sigk$ vs $L_1$}
+%% =========================================================================
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{lllll}
+\toprule
+Statistic & Type & SSC response & SSC Var & Contains NG? \\
+\midrule
+$C_\ell$ & 2-pt & $R_\ell \,C_\ell$ & $\xibar\,R_\ell^2 C_\ell^2$ & No \\
+$\sigk(\theta)$ & 2-pt & $C_R\,\sigk$ & $\xibar\,C_R^2\,\sigk^2$ & No \\
+$P(\kappa)$ & 1-pt & $b_1(\kappa)\,P(\kappa)$ & $\xibar\,[b_1 P]^2$ & Yes \\
+$L_1 = \langle|\kappa|\rangle$ & 1-pt & $A_\mathrm{SSC}$ & $\xibar\,A_\mathrm{SSC}^2$ & Yes \\
+\bottomrule
+\end{tabular}
+\caption{Summary of statistics and their SSC properties.  All SSC terms
+are proportional to the same $\xibar = \sigk(\theta_\mathrm{survey})$.
+$C_\ell$ and $\sigk$ carry identical information; $L_1$ carries
+additional non-Gaussian information through $A_\mathrm{SSC} \neq 0$ for
+skewed PDFs.}
+\label{tab:statistics}
+\end{table}
+
+\subsection{Key points}
+
+\paragraph{$C_\ell$ and $\sigk$ are equivalent.}
+Equation~\eqref{eq:sigma2_ell} is a linear transform of $C_\ell$.
+They carry the same two-point information.  Propagating $C_\ell$ uncertainty
+to $\sigk$ and then to $L_1$ (via $L_1 \approx \sqrt{2\sigk/\pi}$) gives
+the \emph{same} small variance as the P(k) cosmic variance route ($\sim
+0.4\%$).
+
+\paragraph{$L_1$ is sensitive to $P(\kappa)$ shape, not just $\sigk$.}
+The SSC response of $L_1$ is $\partial L_1/\partial\delta_b =
+\int\mathrm{sign}(\kappa)\,P(\kappa)\,\dd\kappa$, which is non-zero only
+for \emph{asymmetric} PDFs.  The variance $\sigk$ has SSC response
+$C_R\sigk$ — both are non-zero, but
+\begin{equation}
+  \frac{\mathrm{Var}_\mathrm{SSC}(L_1)}{\mathrm{Var}_\mathrm{SSC}(\sigk)}
+  \;=\;
+  \frac{A_\mathrm{SSC}^2}{C_R^2\,\sigk^2}
+  \;\neq\; 1
+  \label{eq:ratio}
+\end{equation}
+in general.  There is no reason the SSC contribution to $L_1$ should
+equal the SSC contribution to $\sigk$ or $C_\ell$.
+
+\paragraph{Dominant $L_1$ variability for small surveys.}
+For $A \lesssim 200\;\mathrm{deg}^2$, $\mathrm{Var}_\mathrm{shot}$ dominates.
+For $A \gtrsim 1000\;\mathrm{deg}^2$, $\mathrm{Var}_\mathrm{SSC}$ dominates
+(shot noise $\propto A^{-1}$; SSC $\propto \xibar(A)$ which decreases
+more slowly with area).
+
+%% =========================================================================
+\section{Summary of Implementations}
+%% =========================================================================
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{lll}
+\toprule
+Function & File & Equation(s) \\
+\midrule
+\texttt{compute\_sigma\_kappa\_squared} & \texttt{CommonUtils.py}
+  & Eqs.~\eqref{eq:sigma2_ell}--\eqref{eq:Pkappa_limber} \\
+\texttt{get\_l1\_estimator\_variance} & \texttt{CommonUtils.py}
+  & Eqs.~\eqref{eq:Npix}--\eqref{eq:Var_shot} \\
+\texttt{sample\_l1\_from\_pdf} & \texttt{CommonUtils.py}
+  & Monte-Carlo of Eq.~\eqref{eq:Var_shot} \\
+\texttt{get\_l1\_ssc\_variance} & \texttt{CommonUtils.py}
+  & Eqs.~\eqref{eq:xibar_def}, \eqref{eq:b1_gaussian},
+    \eqref{eq:A_SSC}, \eqref{eq:Var_SSC_L1} \\
+\texttt{sample\_l1\_ssc} & \texttt{CommonUtils.py}
+  & Eqs.~\eqref{eq:PDF_shift}, \eqref{eq:Var_SSC_L1} \\
+\texttt{sample\_l1\_combined} & \texttt{CommonUtils.py}
+  & Eq.~\eqref{eq:Var_tot} \\
+\texttt{get\_covariance} & \texttt{CovarianceMatrix.py}
+  & Eqs.~\eqref{eq:CovG}--\eqref{eq:Pn_z} \\
+\texttt{sample\_pk\_ssc} & \texttt{CovarianceMatrix.py}
+  & Eqs.~\eqref{eq:Pn_ssc}--\eqref{eq:R1} \\
+\bottomrule
+\end{tabular}
+\caption{WALE functions and their corresponding equations.}
+\label{tab:implementations}
+\end{table}
+
+%% =========================================================================
+\section*{References}
+%% =========================================================================
+
+\begin{itemize}
+  \item Uhlemann et al.~(2022), \textit{One-point statistics matter in
+        extended cosmologies}, arXiv:2210.07819.
+  \item Gualdi et al.~(2021), \textit{Integrated trispectrum model},
+        arXiv:2104.XXXXX.
+  \item Wagner, Baldauf \& Schmidt (2015), \textit{Separate universe
+        simulations}, arXiv:1507.05603.
+  \item Lacasa \& Grain (2019), \textit{Fast and easy super-sample
+        covariance}, A\&A 624, A61.
+  \item Bernardeau \& Reimberg (2016), \textit{LDT for the cosmic
+        convergence field}, Phys.~Rev.~D 94, 063520.
+  \item Barthelemy et al.~(2020), \textit{Starlet $\ell_1$-norm from LDT},
+        A\&A 641, A246.
+\end{itemize}
+
+\end{document}

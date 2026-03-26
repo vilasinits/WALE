@@ -503,38 +503,234 @@ def get_covariance(cosmo, z, variability, numberofrealisations):
         return alpha * (k / k0) ** beta * (1 + (k / k1) ** gamma) ** (-delta)
 
     if variability:
-        Cgauss = np.array([np.diag(2.0 * Pnl[i] ** 2 / Nmodes) for i in range(na)])
-        cov = np.empty((na, Nk, Nk))
         A = A_eff(k)
-        for i in range(na):
-            # i-trispectrum approximation
-            T_eff = np.outer(A * Pnl[i], A * Pnl[i])
-            cov[i] = Cgauss[i] + T_eff / vol
-
         N = numberofrealisations
-        pnl_samples = np.empty((na, N, Nk))
+
+        # --- Fractional covariance C_frac[k,k'] = <eps(k) eps(k')> ---
+        # This is z-independent: same shape fluctuation applies to all z-slices.
+        #   Gaussian: 2/N_modes (diagonal)
+        #   NG i-trispectrum: A(k)*A(k') / vol
+        C_frac = np.diag(2.0 / Nmodes) + np.outer(A, A) / vol
+        C_frac += np.eye(Nk) * 1e-12 * np.trace(C_frac) / Nk
+
+        # Draw N fractional shape realizations eps(k) ~ N(0, C_frac), one per mock
+        eps_samples = np.random.multivariate_normal(np.zeros(Nk), C_frac, size=N)
+        # eps_samples shape: (N, Nk)
+
+        # Apply the SAME eps(k) to ALL z-slices for physical z-correlations:
+        #   P_sample(k, z_i) = P_fid(k, z_i) * (1 + eps(k))
+        pk_dict = {float(z_): Pnl[i] for i, z_ in enumerate(z)}
         pk_samples_list = []
-
-        for i in range(na):
-            mean_i = Pnl[i]
-            cov_i = cov[i]
-            cov_i += np.eye(Nk) * 1e-12 * np.trace(cov_i) / Nk
-            pnl_samples[i] = np.random.multivariate_normal(mean_i, cov_i, size=N)
-            
-        # for i in range(na):
-        #     plt.loglog(k, np.array(pnl_samples[i]).T,alpha=0.5)
-        #     plt.loglog(k, Pnl[i], color='black', lw=2, label='Pnl')
-
-        pk_dict = {z_: Pnl[i] for i, z_ in enumerate(z)}
         for n in range(N):
-            pk_i = {z[j]: pnl_samples[j, n, :] for j in range(na)}
-            pk_samples_list.append(pk_i)
+            eps = eps_samples[n]  # shape (Nk,), same for all z
+            pk_n = {
+                float(z[i]): np.maximum(Pnl[i] * (1.0 + eps), 0.0)
+                for i in range(na)
+            }
+            pk_samples_list.append(pk_n)
 
-    
-        cov_dict = {z_: cov[i] for i, z_ in enumerate(z)}
+        # Per-z absolute covariance (for diagnostics / backward compat)
+        cov_dict = {
+            float(z_): (np.diag(2.0 * Pnl[i] ** 2 / Nmodes)
+                         + np.outer(A * Pnl[i], A * Pnl[i]) / vol)
+            for i, z_ in enumerate(z)
+        }
         return cov_dict, pk_samples_list, pk_dict
 
     else:
-        
         pk_dict = {z_: Pnl[i] for i, z_ in enumerate(z)}
         return pk_dict
+
+
+def sample_pk_ssc(cosmo, z, xi_bar, n_samples=20, seed=None):
+    """
+    Draw P(k) realisations consistent with the SSC model via the
+    separate-universe (growth) response.
+
+    Physical picture
+    ----------------
+    A background matter density mode δ_b coherent over the survey shifts the
+    local matter power spectrum via the growth response R₁(k):
+
+        P_n(k, z) = P_fid(k, z) × (1 + R₁(k, z) × δ_b_n)
+
+    where δ_b_n ~ N(0, σ²_b) and σ²_b is chosen so that the resulting
+    variance of the mean convergence κ̄ over the survey matches ξ̄:
+
+        ξ̄  =  Var(κ̄)  =  [∫ W(χ)/χ D(χ) dχ]²  ×  σ²_b  ×  [...]
+
+    In practice we work directly in convergence space: a background shift
+    δ_b applied to all redshift slices simultaneously (SSC is z-coherent)
+    with amplitude drawn from N(0, ξ̄ / C_R²) where C_R is the
+    fractional σ²_κ response to a unit background shift.
+
+    The SAME δ_b drives P(k) at ALL redshifts — this is the key difference
+    from independent-per-z sampling (which gives ~0.4% σ²_κ scatter) vs
+    the SSC coherent mode.
+
+    Parameters
+    ----------
+    cosmo : Cosmology_function
+    z : array_like, shape (nz,)
+        Redshifts (must be sorted ascending).
+    xi_bar : float
+        ξ̄ = σ²_κ(θ_survey) from ``get_l1_ssc_variance`` or
+        ``compute_sigma_kappa_squared`` at the survey angular scale.
+    n_samples : int
+        Number of P(k) realisations.
+    seed : int or None
+
+    Returns
+    -------
+    pk_samples_list : list of dict
+        Length *n_samples*.  Each dict maps ``float(z_i)`` → P(k) ndarray.
+        Same format as ``get_covariance(..., variability=True)``.
+    pk_fid_dict : dict
+        Fiducial P(k) at each z.
+    delta_b_samples : ndarray, shape (n_samples,)
+        The drawn background amplitudes.
+    R1 : ndarray, shape (nz, nk)
+        Growth response R₁(k, z) = 26/21 + (1/3) d(ln P_nl)/d(ln k).
+    """
+    rng = np.random.default_rng(seed)
+    z = np.asarray(z, dtype=float)
+    na = len(z)
+    k = np.asarray(cosmo.k, dtype=float)
+
+    Pnl = cosmo.get_nonlinear_pk(z, k)   # (na, nk) or vstack if scalar z
+    if Pnl.ndim == 1:
+        Pnl = Pnl[None, :]
+
+    pk_fid_dict = {float(z[i]): Pnl[i] for i in range(na)}
+
+    # Growth response R₁(k, z) = 26/21 + (1/3) d(ln P_nl)/d(ln k)
+    ln_k = np.log(k)
+    ln_Pnl = np.log(np.maximum(Pnl, 1e-300))
+    d_lnP_d_lnk = np.gradient(ln_Pnl, ln_k, axis=1)   # (na, nk)
+    R1 = 26.0 / 21.0 + (1.0 / 3.0) * d_lnP_d_lnk      # (na, nk)
+
+    # δ_b ~ N(0, sqrt(ξ̄)) — one scalar per realization, same for all z
+    delta_b_samples = rng.normal(0.0, np.sqrt(float(xi_bar)), size=n_samples)
+
+    pk_samples_list = []
+    for n in range(n_samples):
+        db = delta_b_samples[n]
+        # R₁(k,z) × δ_b: fractional perturbation, coherent across all z
+        pk_n = {
+            float(z[i]): np.maximum(Pnl[i] * (1.0 + R1[i] * db), 0.0)
+            for i in range(na)
+        }
+        pk_samples_list.append(pk_n)
+
+    return pk_samples_list, pk_fid_dict, delta_b_samples, R1
+
+
+def sample_pk_combined(cosmo, z, xi_bar, Lbox=None, n_samples=20, seed=None):
+    """
+    P(k) realisations combining BOTH P(k) cosmic variance AND SSC.
+
+    The total fractional perturbation per realization is:
+
+        P_n(k, z_i) = P_fid(k, z_i) * max(1 + eps(k) + R1(k, z_i) * delta_b, 0)
+
+    where the two independent contributions are:
+
+        eps(k)   ~ N(0, C_frac)          -- P(k) CV: N_modes (Gaussian) +
+                                             NG i-trispectrum (Gualdi+2021)
+                                             z-independent, same for all z
+        delta_b  ~ N(0, sqrt(xi_bar))    -- SSC: background convergence mode
+                                             coherent across all z
+        R1(k,z)  = 26/21 + d(lnP)/d(lnk)/3  -- separate-universe growth response
+
+    Both eps and delta_b use the SAME draw for all redshift slices (z-correlated).
+    The two are drawn independently (different physical sources).
+
+    Parameters
+    ----------
+    cosmo : Cosmology_function
+    z : array_like
+        Lens-plane redshifts (sorted ascending).
+    xi_bar : float
+        SSC background mode variance = sigma^2_kappa(theta_survey).
+        From ``get_l1_ssc_variance`` or ``compute_sigma_kappa_squared``
+        at the survey angular scale.
+    Lbox : float or None
+        Simulation box side in Mpc/h for N_modes counting.
+        Defaults to 505 Mpc/h (SLICS).
+    n_samples : int
+    seed : int or None
+
+    Returns
+    -------
+    pk_samples_list : list of dict
+        Length n_samples.  Each dict maps float(z_i) -> P(k) array.
+    pk_fid_dict : dict
+        Fiducial P(k) at each z.
+    eps_samples : ndarray (n_samples, nk)
+        Drawn CV fractional perturbations.
+    delta_b_samples : ndarray (n_samples,)
+        Drawn SSC background amplitudes.
+    R1 : ndarray (nz, nk)
+        Growth response used for SSC.
+    """
+    rng = np.random.default_rng(seed)
+    z   = np.asarray(z, dtype=float)
+    na  = len(z)
+    k   = np.asarray(cosmo.k, dtype=float)
+    Nk  = len(k)
+
+    if Lbox is None:
+        Lbox = 505.0 / cosmo.h          # Mpc  (505 Mpc/h SLICS default)
+    vol = Lbox ** 3
+
+    # ── P(k) fiducial ────────────────────────────────────────────────────────
+    Pnl = cosmo.get_nonlinear_pk(z, k)
+    if Pnl.ndim == 1:
+        Pnl = Pnl[None, :]
+    pk_fid_dict = {float(z[i]): Pnl[i] for i in range(na)}
+
+    # ── CV: fractional covariance C_frac ─────────────────────────────────────
+    k_edges   = np.concatenate([[k[0]], 0.5*(k[:-1]+k[1:]), [k[-1]]])
+    dk_shells = np.diff(k_edges)
+    Nmodes    = (vol / (3.0 * (2*np.pi)**2)
+                 * ((k + dk_shells/2)**3 - (k - dk_shells/2)**3))
+
+    alpha, beta, gamma, delta_ng, k0, k1 = 35.0, 0.87, 1.94, 2.11, 0.1, 1.0
+    A = alpha * (k/k0)**beta * (1 + (k/k1)**gamma)**(-delta_ng)
+
+    # Super-survey modes (k < 2π/Lbox) have Nmodes < 1 → 2/Nmodes blows up.
+    # These are handled by SSC (delta_b term), so zero out CV for them.
+    k_fund = 2.0 * np.pi / Lbox
+    in_survey = k >= k_fund                        # True for k ≥ fundamental mode
+    # Also floor in-survey Nmodes at 1: modes with Nmodes < 1 have unphysically
+    # large variance for a Gaussian model.  A draw of eps from N(0, 2/Nmodes)
+    # with Nmodes<1 can give eps << -1 → P_n < 0 → log(P_n)=-∞ → PyCCL spline blows up.
+    Nmodes_floored = np.where(in_survey, np.maximum(Nmodes, 1.0), np.inf)
+
+    C_frac  = np.diag(2.0 / Nmodes_floored) + np.outer(A * in_survey, A * in_survey) / vol
+    C_frac += np.eye(Nk) * 1e-12 * np.trace(C_frac) / Nk
+
+    # ── SSC: growth response R1(k, z) ────────────────────────────────────────
+    ln_k    = np.log(k)
+    ln_Pnl  = np.log(np.maximum(Pnl, 1e-300))
+    d_lnP_d_lnk = np.gradient(ln_Pnl, ln_k, axis=1)   # (na, nk)
+    R1      = 26.0/21.0 + d_lnP_d_lnk / 3.0            # (na, nk)
+
+    # ── Draw independent samples ──────────────────────────────────────────────
+    eps_samples     = rng.multivariate_normal(np.zeros(Nk), C_frac, size=n_samples)
+    delta_b_samples = rng.normal(0.0, np.sqrt(float(xi_bar)), size=n_samples)
+
+    # ── Combine ───────────────────────────────────────────────────────────────
+    pk_samples_list = []
+    for n in range(n_samples):
+        eps = eps_samples[n]       # (Nk,)  — same for all z
+        db  = delta_b_samples[n]   # scalar — same for all z
+        pk_n = {
+            # Clip factor to [0.02, 50] to avoid P_n → 0 (breaks log(Pk2D) spline)
+            # or P_n → ∞ (unphysical extreme CV modes near the survey boundary).
+            float(z[i]): Pnl[i] * np.clip(1.0 + eps + R1[i] * db, 0.02, 50.0)
+            for i in range(na)
+        }
+        pk_samples_list.append(pk_n)
+
+    return pk_samples_list, pk_fid_dict, eps_samples, delta_b_samples, R1
