@@ -151,9 +151,13 @@ class Variance:
         return _sigma2_jit(self._k_jax, bw, self.filter_type, R1, R2)
 
     def get_sig_slice(self, z, R1, R2):
-        """σ²(R₁) + σ²(R₂) − 2σ²(R₁, R₂)"""
+        """σ²(R₁) + σ²(R₂) − 2σ²(R₁, R₂)  [2-cell / annulus variance]"""
         return (
             self.nonlinear_sigma2(z, R1)
             + self.nonlinear_sigma2(z, R2)
             - 2.0 * self.nonlinear_sigma2(z, R1, R2)
         )
+
+    def get_sig_slice_1cell(self, z, R1):
+        """σ²(R₁, R₁)  [single-cell variance at radius R₁]"""
+        return self.nonlinear_sigma2(z, R1)

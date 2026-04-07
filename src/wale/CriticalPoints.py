@@ -22,6 +22,7 @@ from .RateFunction import (
     get_psi_2cell,
     get_psi_derivative_delta1,
     get_psi_derivative_delta2,
+    _psi_2cell,
 )
 from .FilterFunctions import top_hat_filter, starlet_filter
 from .VarianceCalculator import _simpson_jax
@@ -55,6 +56,75 @@ def _psi_grid_jit(k, bw, R1_arr, R2_arr, tau1, tau2, filter_type, recal_value):
         * recal_value / (det * 2.0)
     )
     return psi
+
+
+@functools.partial(jax.jit, static_argnums=(3,))
+def _psi_grid_1cell_jit(k, bw, R_arr, filter_type, tau_arr, recal_value):
+    """
+    JIT-compiled ψ₁(δ) on a 1D δ-grid.
+
+    bw = k · P(k) · simpson_weights / (2π), pre-computed per (z, pk).
+    Compiled once per filter_type; all z-slice calls reuse the same XLA graph.
+
+    Parameters
+    ----------
+    k : jnp array, shape (nk,)
+    bw : jnp array, shape (nk,)
+        Pre-computed k·P(k)·w_simp/(2π) for this z-slice.
+    R_arr : jnp array, shape (ngrid,)
+        Lagrangian radii R = χ·√max(1+δ, 0.01)·θ₁ for each δ.
+    filter_type : str
+        "tophat" or "starlet" (static — determines JIT compilation branch).
+    tau_arr : jnp array, shape (ngrid,)
+        τ(ρ) evaluated at ρ = 1+δ for each δ in the grid.
+    recal_value : float
+        Empirical recalibration factor.
+
+    Returns
+    -------
+    psi : jnp array, shape (ngrid,)
+        ψ₁(δ) = τ(ρ)²·recal / (2 σ²(R, R)) for each δ.
+    """
+    if filter_type == "tophat":
+        W = top_hat_filter(k[None, :], R_arr[:, None])   # (ngrid, nk)
+    else:
+        W = starlet_filter(k[None, :], R_arr[:, None])   # (ngrid, nk)
+
+    sig11 = jnp.sum(W ** 2 * bw[None, :], axis=-1)       # (ngrid,)
+    psi   = tau_arr ** 2 * recal_value / (2.0 * sig11)   # (ngrid,)
+    return psi
+
+
+@functools.partial(jax.jit, static_argnums=(4,))
+def _g_batch_jax(k, bw, chi, recal, filter_type, theta1, theta2, d1_arr, d2_arr, lw):
+    """
+    Vectorised g(d1, d2) = (∂ψ/∂δ₁ + ∂ψ/∂δ₂) / W for all points on a contour.
+
+    g = 0 is the stationarity condition on the det(Hψ)=0 catastrophe manifold
+    (i.e. the critical-point condition for the 2-cell SCGF).
+
+    Replaces the n_samples Python loop in _roots_along_path with one JIT+vmap call.
+
+    Parameters
+    ----------
+    k, bw    : (nk,) wavenumber and base-weight arrays for this z-slice
+    chi      : scalar  comoving distance [Mpc]
+    recal    : scalar  recalibration factor
+    filter_type : 'tophat' or 'starlet' (static)
+    theta1, theta2 : angular scales [rad]
+    d1_arr, d2_arr : (n_samples,)  contour coordinates
+    lw       : scalar  lensing weight W(χ)
+    """
+    deld = 1e-6
+
+    def g_one(d1, d2):
+        dpsi1 = (_psi_2cell(k, bw, chi, d1 + deld, d2, theta1, theta2, recal, filter_type)
+                 - _psi_2cell(k, bw, chi, d1 - deld, d2, theta1, theta2, recal, filter_type)) / (2.0 * deld)
+        dpsi2 = (_psi_2cell(k, bw, chi, d1, d2 + deld, theta1, theta2, recal, filter_type)
+                 - _psi_2cell(k, bw, chi, d1, d2 - deld, theta1, theta2, recal, filter_type)) / (2.0 * deld)
+        return (dpsi1 + dpsi2) / lw
+
+    return jax.vmap(g_one)(d1_arr, d2_arr)
 
 
 class CriticalPointsFinder:
@@ -118,12 +188,45 @@ class CriticalPointsFinder:
 
     # ---------- core numeric helpers ----------
 
+    def _psi_grid_batch(self, variance):
+        """
+        Compute ψ(δ₁, δ₂) for ALL z-slices simultaneously via vmap.
+
+        Replaces the per-slice Python loop with one fused XLA kernel over
+        the (nchi, ngrid, ngrid) grid.
+
+        Returns
+        -------
+        psi_all : np.ndarray, shape (nchi, ngrid, ngrid)
+        """
+        k        = variance._k_jax
+        bw_stack = jnp.stack([variance._bw_jax[z] for z in self.z])   # (nchi, nk)
+        R1_stack = jnp.stack([                                          # (nchi, ngrid)
+            jnp.asarray(chi * np.sqrt(np.maximum(1.0 + self.delta1_vals, 0.01)) * self.theta1)
+            for chi in self.chis
+        ])
+        R2_stack = jnp.stack([                                          # (nchi, ngrid)
+            jnp.asarray(chi * np.sqrt(np.maximum(1.0 + self.delta2_vals, 0.01)) * self.theta2)
+            for chi in self.chis
+        ])
+        psi_all = jax.vmap(
+            lambda bw_i, R1_i, R2_i: _psi_grid_jit(
+                k, bw_i, R1_i, R2_i,
+                self._tau1, self._tau2,
+                variance.filter_type, self.recal_value,
+            )
+        )(bw_stack, R1_stack, R2_stack)
+        return np.asarray(psi_all, dtype=float)   # (nchi, ngrid, ngrid)
+
     def _psi_grid(self, variance, chi_value, z):
         """
-        Evaluate ψ(δ₁, δ₂) on the full (ngrid × ngrid) grid via _psi_grid_jit.
+        Evaluate ψ(δ₁, δ₂) on the full (ngrid × ngrid) grid.
+        Returns from the pre-computed batch cache when available.
         """
+        if hasattr(self, '_psi_cache') and z in self._psi_cache:
+            return self._psi_cache[z]
         k  = variance._k_jax
-        bw = variance._bw_jax[z]        # pre-computed k·P(k)·w_simp/(2π)
+        bw = variance._bw_jax[z]
         R1_arr = jnp.asarray(
             chi_value * np.sqrt(np.maximum(1.0 + self.delta1_vals, 0.01)) * self.theta1
         )
@@ -249,10 +352,22 @@ class CriticalPointsFinder:
             ) * 1 / lw
             return np.asarray(val).flat[0]
 
-        # sample g
-        gvals = np.empty_like(ts, dtype=float)
-        for k in range(ts.size):
-            gvals[k] = g_at_t(ts[k])
+        # Sample g at all contour points simultaneously via vmap (_g_batch_jax).
+        # This replaces n_samples sequential calls with one fused XLA kernel.
+        d1_arr = jnp.asarray([float(fx(t)) for t in ts], dtype=jnp.float64)
+        d2_arr = jnp.asarray([float(fy(t)) for t in ts], dtype=jnp.float64)
+        gvals = np.asarray(_g_batch_jax(
+            variance._k_jax,
+            variance._bw_jax[z],
+            jnp.float64(chi_value),
+            self.recal_value,
+            variance.filter_type,
+            self.theta1,
+            self.theta2,
+            d1_arr,
+            d2_arr,
+            float(lw),
+        ), dtype=float)
 
         crits = []
         for k in range(ts.size - 1):
@@ -422,6 +537,11 @@ def find_critical_points_for_cosmo(
         smooth_sigma=smooth_sigma,
     )
 
+    # Pre-compute ψ for all z-slices in one vmap call, cache on the finder.
+    # _psi_grid() will return from the cache instead of calling _psi_grid_jit per slice.
+    psi_all = finder._psi_grid_batch(variance)
+    finder._psi_cache = {z: psi_all[i] for i, z in enumerate(finder.z)}
+
     # Per-z processing
     if parallel and _HAVE_JOBLIB:
         results = Parallel(n_jobs=n_jobs, prefer="threads")(
@@ -452,3 +572,97 @@ def find_critical_points_for_cosmo(
     return smallest_positive, largest_negative
 
 
+def find_lambda_range_1cell(variables, variance_linear, variance_nonlinear,
+                            safety_factor=0.85, delta_pos_max=10.0, ngrid=500):
+    """
+    1-cell critical λ finder using linear rate function + per-slice rescaling.
+
+    Physics
+    -------
+    The effective saddle-point condition (after Eq. NLPhi, Boyle et al. 2021):
+
+        r_j · W(χ_j) · λ = ψ'_l(δ*)
+
+    where r_j = σ²_nl(R₀_j) / σ²_l(R₀_j) at the Eulerian scale R₀ = χθ₁,
+    and ψ_l uses the **linear** variance at the Lagrangian scale.
+
+    The effective λ(δ) on the positive branch is:
+
+        λ(δ) = ψ'_l(δ) / (r_j · W(χ_j))
+
+    Its turning point (dλ/dδ = 0) gives λ_crit.  The range is symmetric
+    (see find_lambda_range_1cell docstring of the previous version for
+    the justification).
+
+    Parameters
+    ----------
+    variables : InitialiseVariables
+        Must provide: theta1_radian, redshifts, chis, lensingweights.
+    variance_linear : Variance
+        Built from the **linear** power spectrum (pk=cosmo.plin).
+    variance_nonlinear : Variance
+        Built from the nonlinear Halofit power spectrum (pk=cosmo.pnl).
+    safety_factor : float
+        Fraction of λ_crit (default 0.85).
+    delta_pos_max : float
+        Upper δ limit for positive-branch scan (default 10.0).
+    ngrid : int
+        Grid points on positive branch (default 500).
+
+    Returns
+    -------
+    lambda_min, lambda_max : float
+        Symmetric bounds (−λ_crit · safety_factor, +λ_crit · safety_factor).
+    """
+    theta1 = variables.theta1_radian
+    zarr   = np.asarray(variables.redshifts)
+    chis   = np.asarray(variables.chis)
+    lw     = np.asarray(variables.lensingweights)
+
+    delta_pos = np.linspace(1e-4, delta_pos_max, ngrid)
+    tau_pos   = jnp.asarray(get_tau(1.0 + delta_pos), dtype=jnp.float64)
+    k         = variance_linear._k_jax   # same k-grid for both variances
+
+    lambda_crit_pos_list = []
+
+    for i, (chi, z, w) in enumerate(zip(chis, zarr, lw)):
+        if abs(w) < 1e-12:
+            continue
+
+        w   = float(w)
+
+        # ψ_l on positive branch: use linear bw, recal=1 (no simulation rescaling)
+        bw_l = variance_linear._bw_jax[z]
+        R_pos = jnp.asarray(chi * np.sqrt(1.0 + delta_pos) * theta1, dtype=jnp.float64)
+        psi_l = np.asarray(
+            _psi_grid_1cell_jit(k, bw_l, R_pos, variance_linear.filter_type, tau_pos, 1.0)
+        )
+
+        # Per-slice rescaling ratio r = σ²_nl(R₀) / σ²_l(R₀) at Eulerian scale
+        R0 = float(chi * theta1)
+        sig_nl = float(variance_nonlinear.nonlinear_sigma2(z, R0))
+        sig_l  = float(variance_linear.nonlinear_sigma2(z, R0))
+        r      = sig_nl / sig_l
+
+        # Effective λ(δ) = ψ'_l(δ) / (r · W)
+        # From saddle condition: λ W = ψ'_l(δ*)/r  →  λ = ψ'_l / (r W)
+        dpsi_l  = np.gradient(psi_l, delta_pos)
+        lam_pos = dpsi_l / (r * w)
+
+        # First sign-change in dλ/dδ: peak = λ_crit for this slice
+        dlam  = np.diff(lam_pos)
+        peaks = np.where((dlam[:-1] > 0) & (dlam[1:] <= 0))[0]
+        if peaks.size > 0:
+            lambda_crit_pos_list.append(lam_pos[peaks[0] + 1])
+        else:
+            lambda_crit_pos_list.append(lam_pos[-1])
+
+    if len(lambda_crit_pos_list) == 0:
+        raise ValueError(
+            "find_lambda_range_1cell: no χ-slice with |W| > 1e-12. "
+            "Check lensingweights."
+        )
+
+    lam_crit = float(np.min(lambda_crit_pos_list))
+    bound    = lam_crit * safety_factor
+    return -bound, bound

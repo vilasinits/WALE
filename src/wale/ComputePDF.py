@@ -6,7 +6,7 @@ from scipy.interpolate import CubicSpline
 
 jax.config.update("jax_enable_x64", True)
 
-from wale.RateFunction import get_scaled_cgf
+from wale.RateFunction import get_scaled_cgf, get_scaled_cgf_1cell
 
 
 # ---------------------------------------------------------------------------
@@ -63,10 +63,24 @@ class computePDF:
     4. Evaluate the Bromwich integral for all κ simultaneously via jax.vmap.
     """
 
-    def __init__(self, variables, variance, kappa=None, plot_scgf=False):
-        self.variables = variables
-        self.plot_scgf = plot_scgf
-        self.variance = variance
+    def __init__(self, variables, variance, kappa=None, plot_scgf=False,
+                 single_cell=False, variance_linear=None):
+        """
+        Parameters
+        ----------
+        variance : Variance
+            For 2-cell: built from nonlinear P(k).
+            For 1-cell: also the nonlinear Variance (used for the per-slice
+            rescaling ratio r = σ²_nl/σ²_l).
+        variance_linear : Variance or None
+            For 1-cell only: Variance built from the **linear** P(k).
+            Required when single_cell=True; ignored for 2-cell.
+        """
+        self.variables      = variables
+        self.plot_scgf      = plot_scgf
+        self.variance       = variance          # nonlinear
+        self.variance_linear = variance_linear  # linear (1-cell only)
+        self.single_cell    = single_cell
         if kappa is not None:
             self.kappa = kappa
         else:
@@ -76,17 +90,34 @@ class computePDF:
 
     def get_scgf(self):
         """Compute the SCGF φ(λ) on the lambda grid."""
-        scgf = get_scaled_cgf(
-            self.variables.theta1_radian,
-            self.variables.theta2_radian,
-            self.variables.redshifts,
-            self.variables.chis,
-            self.variables.dchi,
-            self.variables.lensingweights,
-            self.variables.lambdas,
-            self.variables.recal_value,
-            self.variance,
-        )
+        if self.single_cell:
+            if self.variance_linear is None:
+                raise ValueError(
+                    "computePDF: variance_linear must be provided for single_cell=True. "
+                    "Build it with Variance(cosmo, filter_type, pk=cosmo.plin)."
+                )
+            scgf = get_scaled_cgf_1cell(
+                self.variables.theta1_radian,
+                self.variables.redshifts,
+                self.variables.chis,
+                self.variables.dchi,
+                self.variables.lensingweights,
+                self.variables.lambdas,
+                self.variance_linear,    # linear variance → rate function
+                self.variance,           # nonlinear variance → rescaling ratio
+            )
+        else:
+            scgf = get_scaled_cgf(
+                self.variables.theta1_radian,
+                self.variables.theta2_radian,
+                self.variables.redshifts,
+                self.variables.chis,
+                self.variables.dchi,
+                self.variables.lensingweights,
+                self.variables.lambdas,
+                self.variables.recal_value,
+                self.variance,
+            )
         return scgf
 
     def compute_phi_values(self):
@@ -108,18 +139,28 @@ class computePDF:
         scgf = self.get_scgf()
         scgf_1d = np.asarray(scgf).reshape(len(self.variables.lambdas), -1)[:, 0]
 
-        scgf_spline = CubicSpline(self.variables.lambdas, scgf_1d)
-        dscgf = scgf_spline(self.variables.lambdas, 1)
+        # Trim non-finite SCGF values (appear near critical-λ boundaries where
+        # the Newton saddle-point solver diverges; safe to drop edge points).
+        lambdas_all = np.asarray(self.variables.lambdas)
+        finite_mask = np.isfinite(scgf_1d)
+        if not np.all(finite_mask):
+            n_bad = int(np.sum(~finite_mask))
+            print(f"Warning: {n_bad}/{len(scgf_1d)} SCGF values are non-finite; trimming.")
+        lambdas = lambdas_all[finite_mask]
+        scgf_1d = scgf_1d[finite_mask]
+
+        scgf_spline = CubicSpline(lambdas, scgf_1d)
+        dscgf = scgf_spline(lambdas, 1)
 
         if self.plot_scgf:
             plt.figure(figsize=(4, 4))
-            plt.plot(self.variables.lambdas, scgf_1d)
+            plt.plot(lambdas, scgf_1d)
             plt.show()
 
         # Build Legendre-transform coordinate: τ_eff = sign(λ) √(2(λ dφ/dλ - φ))
-        raw = 2.0 * (self.variables.lambdas * dscgf - scgf_1d)
+        raw = 2.0 * (lambdas * dscgf - scgf_1d)
         tau_effective = np.sqrt(np.maximum(raw, 0.0))
-        x_data = np.sign(self.variables.lambdas) * tau_effective
+        x_data = np.sign(lambdas) * tau_effective
         y_data = dscgf
 
         # Degree-5 polynomial p such that p'(τ) ≈ λ  (the saddle-point relation)
@@ -163,6 +204,14 @@ class computePDF:
 
         P(κ) = Im[ ∫ exp(−λκ + φ(λ)) dλ ] / π,   λ = it
 
+        The trapezoidal weights include a Lanczos σ-factor sinc(t/N) which
+        tapers the integrand smoothly to zero at the truncation point t=N,
+        suppressing the Gibbs-like oscillations that cause O(1e-14) negative
+        PDF values in the tails.  The taper is negligible in the bulk
+        (sinc(t/N) ≈ 1 for t ≪ N) so it does not bias the PDF.
+        After integration, any residual negative values are clipped to zero —
+        physically necessary since a PDF cannot be negative.
+
         Returns
         -------
         pdf_values : np.ndarray, shape (nkappa,)
@@ -171,11 +220,20 @@ class computePDF:
         lambda_new, phi_values = self.compute_phi_values()
         kappa_values = self.kappa
 
+        N = len(lambda_new)
+
         # Trapezoidal weights on the imaginary axis
         delta_lambda = 1j  # step size
-        trap_weights = jnp.ones(len(lambda_new), dtype=jnp.complex128) * delta_lambda
+        trap_weights = jnp.ones(N, dtype=jnp.complex128) * delta_lambda
         trap_weights = trap_weights.at[0].set(delta_lambda * 0.5)
         trap_weights = trap_weights.at[-1].set(delta_lambda * 0.5)
+
+        # Lanczos σ-factor: sinc(t/N) tapers the truncated sum to zero at t=N,
+        # eliminating ringing from the hard cutoff.
+        # jnp.sinc(x) = sin(πx)/(πx), so sinc(t/N) → 1 at t=0, → 0 at t=N.
+        t_arr = jnp.arange(N, dtype=jnp.float64)
+        lanczos = jnp.sinc(t_arr / N)
+        trap_weights = trap_weights * lanczos
 
         kappa_jax = jnp.asarray(kappa_values, dtype=jnp.float64)
 
@@ -188,5 +246,5 @@ class computePDF:
 
             return jax.vmap(_pdf_one)(kappa_arr)
 
-        pdf_values = np.array(_bromwich(kappa_jax))
+        pdf_values = np.maximum(np.array(_bromwich(kappa_jax)), 0.0)
         return list(pdf_values), kappa_values

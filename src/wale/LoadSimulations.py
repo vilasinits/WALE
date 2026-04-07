@@ -78,6 +78,62 @@ def get_smoothed_app_pdf(mass_map, window_radius, binedges, filter_type, **kwarg
     counts, _ = np.histogram(difference_map, bins=binedges, density=True)
     return binedges, counts, difference_map
 
+def get_smoothed_pdf(mass_map, window_radius, binedges, filter_type, **kwargs):
+    """
+    Applies top-hat smoothing in Fourier space at two scales and returns the PDF of the difference map.
+
+    The map is filtered with a top-hat window of radius R and 2R, then the difference is computed.
+
+    Parameters:
+        mass_map     : 2D numpy array.
+        window_radius: The smoothing scale (R) in physical units.
+        binedges     : Bin edges for the histogram.
+        L            : Physical size of the map (default 505 MPC/h).
+
+    Returns:
+        tuple : (bin_edges, pdf_counts, difference_map)
+    """
+    if mass_map.ndim != 2:
+        raise ValueError("mass_map must be 2D")
+
+    # Pixel grid / shape
+    shape = mass_map.shape  # (Ny, Nx)
+    
+    if kwargs.get("L") is not None:
+        N = kwargs["L"]
+    else:
+        N = mass_map.shape[0]
+        
+    # Build the two Fourier-space windows
+    W2D_1 = get_W2D_FL(window_radius, shape, filter_type,  **kwargs)
+
+    # Robust checks
+    if W2D_1 is None:
+        raise RuntimeError(
+            f"get_W2D_FL returned None for filter_type='{filter_type}'. "
+            "Check the function signature/arguments and supported filter types."
+        )
+    if W2D_1.shape != shape:
+        raise ValueError(
+            f"Window shapes must match mass_map.shape={shape}, "
+            f"got {W2D_1.shape=}."
+        )
+
+    # FFT of the input field
+    field_ft = np.fft.fftshift(np.fft.fftn(mass_map))
+
+    # Apply the windows in Fourier space (ensure dtype compatibility)
+    W2D_1 = np.asarray(W2D_1, dtype=field_ft.dtype)
+
+    smoothed_ft1 = field_ft * W2D_1
+
+    # Back to real space
+    smoothed1 = np.fft.ifftn(np.fft.ifftshift(smoothed_ft1)).real
+    
+    counts, _ = np.histogram(smoothed1, bins=binedges, density=True)
+    return binedges, counts, smoothed1
+
+
 def get_simulation_l1(
     cosmo_index_to_run,
     tomobin,

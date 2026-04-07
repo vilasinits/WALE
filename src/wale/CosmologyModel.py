@@ -261,15 +261,39 @@ class Cosmology_function:
         Pnl : ndarray
             Non-linear matter power spectrum at redshift z for the given ks, in (Mpc)^3.
         """
-        # default k-grid
         if ks is None:
-            ks = self.k  
+            ks = self.k
         else:
             ks = np.atleast_1d(ks)
         a = 1.0 / (1.0 + z)
-        # compute HALOFIT non-linear power
-        Pnl = ccl.nonlin_matter_power(self.cosmoccl, ks, a)
-        return Pnl
+        return ccl.nonlin_matter_power(self.cosmoccl, ks, a)
+
+    def get_linear_pk(self, z, ks=None):
+        """
+        Compute the linear matter power spectrum P_l(k, z).
+
+        Required for the 1-cell LDT rate function ψ_l(δ) = τ²/(2σ²_l(R_lag))
+        and for the per-slice CGF rescaling ratio r = σ²_nl/σ²_l (Eq. NLPhi,
+        Boyle et al. 2021).
+
+        Parameters
+        ----------
+        z : float
+            Redshift at which to evaluate the power spectrum.
+        ks : array_like, optional
+            Wavenumber values in Mpc⁻¹. If None, uses the default self.k array.
+
+        Returns
+        -------
+        Plin : ndarray
+            Linear matter power spectrum at redshift z, in Mpc³.
+        """
+        if ks is None:
+            ks = self.k
+        else:
+            ks = np.atleast_1d(ks)
+        a = 1.0 / (1.0 + z)
+        return ccl.linear_matter_power(self.cosmoccl, ks, a)
     
     def get_lensing_weight_array(self, chis, chi_source):
         """

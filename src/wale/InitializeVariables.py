@@ -103,7 +103,7 @@ class InitialiseVariables:
             self.numberofrealisations = kwargs.get("numberofrealisations", 5)
             print("          Using halo model for covariance and realizations")
             print(f"          Number of realizations: {self.numberofrealisations}")
-            
+
             self.cosmo.cov, self.cosmo.pnlsamples, self.cosmo.pnl = get_covariance(
                 self.cosmo,
                 z=self.redshifts,
@@ -114,3 +114,14 @@ class InitialiseVariables:
             self.cosmo.pnl = get_covariance(
                 self.cosmo, z=self.redshifts, variability=False, numberofrealisations=1
             )
+
+        # Linear P(k) — required for the 1-cell rate function ψ_l(δ) = τ²/(2σ²_l)
+        # and for the per-slice rescaling ratio r = σ²_nl(R₀)/σ²_l(R₀).
+        self.cosmo.plin = {
+            float(z): self.cosmo.get_linear_pk(float(z))
+            for z in self.redshifts
+        }
+
+        # Default recalibration factor (2-cell only).  Override per-filter with
+        # variables.recal_value = σ²_LDT / σ²_sim before calling computePDF.
+        self.recal_value = 1.0
