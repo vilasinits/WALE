@@ -1,0 +1,6 @@
+Selected cosmologies (S8 quantiles):
+cosmo 15: S8=0.613089
+cosmo 08: S8=0.680444
+cosmo 12: S8=0.751132
+cosmo 22: S8=0.822597
+cosmo 04: S8=0.898634
