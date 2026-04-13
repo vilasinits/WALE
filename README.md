@@ -38,6 +38,24 @@ pip install -e .
 
 Explore the example notebooks in the notebooks/ directory to get started with theory predictions or applications on your own data.
 
+### cosmoSLICS datavector generation (starlet ℓ₁)
+
+For `l1_norm_processing_cosmoslics_starlet.py`, `--params-file` accepts cosmology tables in
+`.npy`, `.npz`, `.dat`, `.txt`, or `.csv` format.
+
+Quick comparison (simulation vs theory) without running inference training:
+
+```bash
+python compare_theory_vs_cosmoslics_l1.py \
+  --sim-npz results/cosmoslics_group_1_10.npz \
+  --theory-npz results/theory_predictions.npz \
+  --bin 4 \
+  --group group_1_10 \
+  --scale-indices 0,1,2,3,4 \
+  --output results/cosmoslics_theory_compare_bin4.npz \
+  --manifest-output results/cosmoslics_theory_compare_bin4.json
+```
+
 ---
 
 ## Key Features
@@ -80,4 +98,3 @@ If you use WALE in your work, please cite the following publication:
   primaryClass = {astro-ph.CO}
 }
 ```
-
