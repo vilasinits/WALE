@@ -1,0 +1,64 @@
+{
+  "counts": {
+    "issues_total": 0,
+    "problematic_saved": 0,
+    "processed_ok": 500,
+    "processing_errors": 0,
+    "rows_candidate": 500,
+    "rows_catalog_error": 0,
+    "rows_catalog_warning": 0,
+    "rows_missing_catalog": 0,
+    "rows_missing_maps": 0,
+    "rows_total": 500,
+    "rows_written": 500,
+    "skipped_quality": 0
+  },
+  "created_at_utc": "2026-04-08T15:53:25.869800+00:00",
+  "inputs": {
+    "bins": [
+      4,
+      5
+    ],
+    "catalog_root": "/nas/tersenov/cosmoSLICS/cosmoSLICS",
+    "doth_base_radius": 20.0,
+    "group": "1-10",
+    "l1_binning": "coeff",
+    "l1_max_snr": 0.06,
+    "l1_min_snr": -0.06,
+    "l1_nbins": 80,
+    "mass_maps_root": "/nas/tersenov/cosmoSLICS/cosmoSLICS/mass_maps",
+    "n_scales": 2,
+    "negative_tolerance": -1e-10,
+    "noise_sigma": 0.0,
+    "params_file": "/home/tersenov/software/WALE/data/CosmoTable.dat",
+    "params_key": null,
+    "pixel_arcmin": 0.5,
+    "quality_policy": "warn",
+    "wavelet_type": "doth",
+    "wiggle_fraction_threshold": 0.85,
+    "wl_stats_path": "/mnt/home/tersenov/software/wl_stats_torch"
+  },
+  "issue_preview": [],
+  "output_npz": "/mnt/home/tersenov/software/WALE/results/doth_group_1_10_multiscale/cosmoslics_doth_noiseless_group1_10_theta20_bins45.npz",
+  "quality_summary": {
+    "by_bin": {
+      "4": {
+        "negative": 0,
+        "non_finite": 0,
+        "problematic": 0,
+        "total_checked": 500,
+        "wiggly": 0
+      },
+      "5": {
+        "negative": 0,
+        "non_finite": 0,
+        "problematic": 0,
+        "total_checked": 500,
+        "wiggly": 0
+      }
+    },
+    "rows_checked": 500,
+    "rows_with_any_problematic": 0
+  },
+  "script": "l1_norm_processing_cosmoslics_starlet.py"
+}
