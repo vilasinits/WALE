@@ -1,0 +1,35 @@
+{
+  "total_simulations": 16965,
+  "selected_simulations": 1299,
+  "selection_fraction": 0.07656940760389036,
+  "criteria": {
+    "Omega_m": [
+      0.21,
+      0.4
+    ],
+    "omega_b": [
+      0.02,
+      0.024
+    ],
+    "n_s": [
+      0.85,
+      1.05
+    ],
+    "sigma_8": [
+      0.61,
+      0.9
+    ],
+    "w_0": [
+      -1.15,
+      -0.85
+    ]
+  },
+  "parameter_names": [
+    "Omega_m",
+    "sigma_8",
+    "w_0",
+    "H_0",
+    "n_s",
+    "Omega_b"
+  ]
+}

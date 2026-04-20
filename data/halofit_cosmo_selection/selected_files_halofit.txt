@@ -1,0 +1,4 @@
+# Selected CosmoGRID simulations passing Halofit criteria
+# Total: 0 simulations
+# Format: cosmo_num perm_num Omega_m sigma_8 w_0 H_0 n_s Omega_b
+#================================================================================
