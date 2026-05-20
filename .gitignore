@@ -1,3 +1,19 @@
 build/
 build/lib/wale/
 .github/copilot-instructions.md
+
+# Python cruft
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Tooling artefacts
+.claude/
+logs/
+
+# Large NPE training artefacts (regenerable from `--train`)
+outputs/checkpoints/
+outputs/standardiz*/
+
+# Raw companions of the L1 sim runs — packed NPZs supersede them
+data/l1/simulations/raw_sim_doth_*.npy
