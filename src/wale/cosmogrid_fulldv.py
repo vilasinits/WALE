@@ -37,6 +37,19 @@ class FullDVConfig:
     )
     save_pk: bool = False
     disable_recal: bool = False  # if True: do not rescale the LDT action by σ²_LDT/σ²_sim
+    # BNT mode: build the lensing kernel as a linear combination of per-bin kernels.
+    # If both are set, `nz_file` is used only for provenance — the kernel comes from
+    # the BNT combination of each n(z) file's individually-normalised kernel.
+    bnt_nz_files: tuple[str, ...] | None = None
+    bnt_coeffs: tuple[float, ...] | None = None
+    # Lambda-range safety cap. The geometric critical-points search per-slice can
+    # return |λ_crit| values that diverge when any lens plane has w → 0 (e.g.
+    # BNT-rotated kernels with cancelling support). The SCGF Newton saddle-point
+    # only converges for |λ * σ_proj| ≲ a few. We clamp |λ_max| to
+    # lambda_sigma_cap / sqrt(σ²_proj) to keep the LDT solver in its valid range.
+    # 2.0 is the tightest value that keeps all 1299 cosmoGRID cosmologies finite
+    # at BNT bin 4, θ=30; the standard (non-BNT) path bypasses the clamp entirely.
+    lambda_sigma_cap: float = 2.0
 
 
 def build_ell_grid(
@@ -183,6 +196,8 @@ def _compute_one_cosmology(
             theta1=config.theta1,
             nplanes=config.nplanes,
             numberofrealisations=1,
+            bnt_nz_files=config.bnt_nz_files,
+            bnt_coeffs=config.bnt_coeffs,
         )
 
         variance_theory = Variance(
@@ -224,6 +239,21 @@ def _compute_one_cosmology(
             min_z=config.min_z,
             max_z=config.max_z,
         )
+        # Clamp the geometric critical λ values to a physically-reasonable scale
+        # when running BNT mode: the per-slice critical-points search divides by
+        # per-plane w, so slices with near-zero kernel (BNT cancellation regions)
+        # inflate λ_crit by orders of magnitude — those values land outside the
+        # SCGF Newton convergence basin (which requires |λ * σ_proj| ≲ a few).
+        # The standard (non-BNT) path is untouched to preserve numerical
+        # equivalence with the existing reference NPZs.
+        if config.bnt_nz_files is not None and config.bnt_coeffs is not None:
+            lam_cap = float(config.lambda_sigma_cap) / float(
+                np.sqrt(max(float(sigmasq_map_2c_th), 1e-30))
+            )
+            if smallest_positive is not None:
+                smallest_positive = float(min(smallest_positive, lam_cap))
+            if largest_negative is not None:
+                largest_negative = float(max(largest_negative, -lam_cap))
         if smallest_positive is None or largest_negative is None:
             lambdas = np.linspace(
                 config.lambda_fallback_min,
@@ -323,7 +353,17 @@ def run_cosmogrid_fulldv(
             for i in indices
         ]
     else:
-        results = Parallel(n_jobs=n_jobs, backend=backend, verbose=verbose)(
+        # `inner_max_num_threads=1` is the canonical way to stop joblib's loky
+        # workers from oversubscribing the CPU through nested BLAS/OpenMP/Eigen
+        # pools. Without it, a 40-worker run can balloon to 100+ active cores
+        # because JAX's Eigen-based CPU executor defaults to one thread per
+        # physical core *per worker*.
+        results = Parallel(
+            n_jobs=n_jobs,
+            backend=backend,
+            verbose=verbose,
+            inner_max_num_threads=1,
+        )(
             delayed(_compute_one_cosmology)(
                 i=i,
                 param_i=params[i],
