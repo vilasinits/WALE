@@ -74,10 +74,17 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    # Encourage joblib processes not to oversubscribe BLAS.
+    # Encourage joblib processes not to oversubscribe BLAS / OpenMP / XLA.
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
     os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+    os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+    os.environ.setdefault(
+        "XLA_FLAGS",
+        "--xla_cpu_multi_thread_eigen=false "
+        "intra_op_parallelism_threads=1 "
+        "inter_op_parallelism_threads=1",
+    )
 
     from wale.cosmogrid_fulldv import FullDVConfig, run_cosmogrid_fulldv
 

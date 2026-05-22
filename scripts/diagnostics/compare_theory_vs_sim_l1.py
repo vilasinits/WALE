@@ -51,6 +51,9 @@ def parse_args() -> argparse.Namespace:
                    help="Parameter index to colour cosmologies by (default 0: Omega_m).")
     p.add_argument("--ymax-frac", type=float, default=0.30)
     p.add_argument("--ymax-sigma", type=float, default=6.0)
+    p.add_argument("--cov-out", type=Path, default=None,
+                   help="Override path for the saved fid-cov NPZ "
+                        "(default: data/l1/simulations/fid_cov_{tag}.npz).")
     return p.parse_args()
 
 
@@ -163,7 +166,9 @@ def main() -> None:
     print(f"Saved {out_combined}")
 
     # Optional: save the fiducial covariance for downstream consumers
-    cov_npz = REPO_ROOT / "data" / "l1" / "simulations" / f"fid_cov_{tag}.npz"
+    cov_npz = args.cov_out or (
+        REPO_ROOT / "data" / "l1" / "simulations" / f"fid_cov_{tag}.npz"
+    )
     cov_npz.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(cov_npz, kappa_bins=kappa, cov=cov_fid, sigma_diag=sig_fid, theta=theta)
     print(f"Saved fiducial cov: {cov_npz}")
